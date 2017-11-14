@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Using Lua with C++</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="author" content="Christian Stigen Larsen" />
+    <meta name="description" content="Tutorial on creating Lua host programs in C++" />
+
+    
+    <link rel="prefetch" href="/">
+
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS"
+          href="/feed.xml" />
+
+    <style type="text/css">
+    /*! normalize.css v3.0.2 | MIT License | git.io/normalize */html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary{display:block}audio,canvas,progress,video{display:inline-block;vertical-align:baseline}audio:not([controls]){display:none;height:0}[hidden],template{display:none}a{background-color:transparent}a:active,a:hover{outline:0}abbr[title]{border-bottom:1px dotted}b,strong{font-weight:bold}dfn{font-style:italic}h1{font-size:2em;margin:.67em 0}mark{background:#ff0;color:#000}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sup{top:-0.5em}sub{bottom:-0.25em}img{border:0}svg:not(:root){overflow:hidden}figure{margin:1em 40px}hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}pre{overflow:auto}code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}button{overflow:visible}button,select{text-transform:none}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}button[disabled],html input[disabled]{cursor:default}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{height:auto}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}legend{border:0;padding:0}textarea{overflow:auto}optgroup{font-weight:bold}table{border-collapse:collapse;border-spacing:0}td,th{padding:0}.container{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 20px;box-sizing:border-box}.column,.columns{width:100%;float:left;box-sizing:border-box}@media(min-width:400px){.container{width:85%;padding:0}}@media(min-width:550px){.container{width:80%}.column,.columns{margin-left:4%}.column:first-child,.columns:first-child{margin-left:0}.one.column,.one.columns{width:4.66666666667%}.two.columns{width:13.3333333333%}.three.columns{width:22%}.four.columns{width:30.6666666667%}.five.columns{width:39.3333333333%}.six.columns{width:48%}.seven.columns{width:56.6666666667%}.eight.columns{width:65.3333333333%}.nine.columns{width:74%}.ten.columns{width:82.6666666667%}.eleven.columns{width:91.3333333333%}.twelve.columns{width:100%;margin-left:0}.one-third.column{width:30.6666666667%}.two-thirds.column{width:65.3333333333%}.one-half.column{width:48%}.offset-by-one.column,.offset-by-one.columns{margin-left:8.66666666667%}.offset-by-two.column,.offset-by-two.columns{margin-left:17.3333333333%}.offset-by-three.column,.offset-by-three.columns{margin-left:26%}.offset-by-four.column,.offset-by-four.columns{margin-left:34.6666666667%}.offset-by-five.column,.offset-by-five.columns{margin-left:43.3333333333%}.offset-by-six.column,.offset-by-six.columns{margin-left:52%}.offset-by-seven.column,.offset-by-seven.columns{margin-left:60.6666666667%}.offset-by-eight.column,.offset-by-eight.columns{margin-left:69.3333333333%}.offset-by-nine.column,.offset-by-nine.columns{margin-left:78.0}.offset-by-ten.column,.offset-by-ten.columns{margin-left:86.6666666667%}.offset-by-eleven.column,.offset-by-eleven.columns{margin-left:95.3333333333%}.offset-by-one-third.column,.offset-by-one-third.columns{margin-left:34.6666666667%}.offset-by-two-thirds.column,.offset-by-two-thirds.columns{margin-left:69.3333333333%}.offset-by-one-half.column,.offset-by-one-half.columns{margin-left:52%}}html{font-size:62.5%}body{font-size:1.5em;line-height:1.6;font-weight:400;font-family:"Raleway","HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif;color:#222}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:2rem;font-weight:300}h1{font-size:4.0rem;line-height:1.2;letter-spacing:-.1rem}h2{font-size:3.6rem;line-height:1.25;letter-spacing:-.1rem}h3{font-size:3.0rem;line-height:1.3;letter-spacing:-.1rem}h4{font-size:2.4rem;line-height:1.35;letter-spacing:-.08rem}h5{font-size:1.8rem;line-height:1.5;letter-spacing:-.05rem}h6{font-size:1.5rem;line-height:1.6;letter-spacing:0}@media(min-width:550px){h1{font-size:5.0rem}h2{font-size:4.2rem}h3{font-size:3.6rem}h4{font-size:3.0rem}h5{font-size:2.4rem}h6{font-size:1.5rem}}p{margin-top:0}a{color:#1eaedb}a:hover{color:#0fa0ce}.button,button,input[type="submit"],input[type="reset"],input[type="button"]{display:inline-block;height:38px;padding:0 30px;color:#555;text-align:center;font-size:11px;font-weight:600;line-height:38px;letter-spacing:.1rem;text-transform:uppercase;text-decoration:none;white-space:nowrap;background-color:transparent;border-radius:4px;border:1px solid #bbb;cursor:pointer;box-sizing:border-box}.button:hover,button:hover,input[type="submit"]:hover,input[type="reset"]:hover,input[type="button"]:hover,.button:focus,button:focus,input[type="submit"]:focus,input[type="reset"]:focus,input[type="button"]:focus{color:#333;border-color:#888;outline:0}.button.button-primary,button.button-primary,input[type="submit"].button-primary,input[type="reset"].button-primary,input[type="button"].button-primary{color:#FFF;background-color:#33c3f0;border-color:#33c3f0}.button.button-primary:hover,button.button-primary:hover,input[type="submit"].button-primary:hover,input[type="reset"].button-primary:hover,input[type="button"].button-primary:hover,.button.button-primary:focus,button.button-primary:focus,input[type="submit"].button-primary:focus,input[type="reset"].button-primary:focus,input[type="button"].button-primary:focus{color:#FFF;background-color:#1eaedb;border-color:#1eaedb}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea,select{height:38px;padding:6px 10px;background-color:#fff;border:1px solid #d1d1d1;border-radius:4px;box-shadow:none;box-sizing:border-box}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea{-webkit-appearance:none;-moz-appearance:none;appearance:none}textarea{min-height:65px;padding-top:6px;padding-bottom:6px}input[type="email"]:focus,input[type="number"]:focus,input[type="search"]:focus,input[type="text"]:focus,input[type="tel"]:focus,input[type="url"]:focus,input[type="password"]:focus,textarea:focus,select:focus{border:1px solid #33c3f0;outline:0}label,legend{display:block;margin-bottom:.5rem;font-weight:600}fieldset{padding:0;border-width:0}input[type="checkbox"],input[type="radio"]{display:inline}label>.label-body{display:inline-block;margin-left:.5rem;font-weight:normal}ul{list-style:circle inside}ol{list-style:decimal inside}ol,ul{padding-left:0;margin-top:0}ul ul,ul ol,ol ol,ol ul{margin:1.5rem 0 1.5rem 3rem;font-size:90%}li{margin-bottom:1rem}code{padding:.2rem .5rem;margin:0 .2rem;font-size:80%;white-space:nowrap}pre>code{display:block;padding:1rem 1.5rem;white-space:pre}@media(max-width:640px){code{margin:0;padding:0}pre>code{padding:0;margin:0}}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #e1e1e1}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}button,.button{margin-bottom:1rem}input,textarea,select,fieldset{margin-bottom:1.5rem}pre,blockquote,dl,figure,table,p,ul,ol,form{margin-bottom:2.5rem}.u-full-width{width:100%;box-sizing:border-box}.u-max-full-width{max-width:100%;box-sizing:border-box}.u-pull-right{float:right}.u-pull-left{float:left}hr{margin-top:3rem;margin-bottom:3.5rem;border-width:0;border-top:1px solid #e1e1e1}.container:after,.row:after,.u-cf{content:"";display:table;clear:both}body{font-family:"Crimson Text",serif;font-size:2.1rem;text-align:justify;text-justify:inter-word;color:black}footer{font-size:small;font-family:"Helvetica",sans-serif}h1{text-align:left;font-weight:bold}h2{text-align:left;font-weight:bold}.plaintable{border:0;vertical-align:top;padding:6px 12px}.plaintable a{background-color:transparent}.sans-serif{font-family:"Helvetica",sans-serif}ul li{list-style-type:disc}.author{font-size:1.7rem;padding:0rem}a{text-decoration:none;background-color:#eafffa;color:black}mark{background-color:#ffe8f8}h1 a:hover{color:black}a:hover{color:black}code{border:0;color:black}p code{color:#233a31}@media(max-width:800px){figure{padding:0;margin:0}body{text-align:left}.hidesmall{display:none}}@media(min-width:900px){figure{padding:0;margin:1em}ul,ol{padding-left:2em}.hidesmall{display:block}}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:400;src:local('Crimson Text'),local('CrimsonText-Roman'),url(https://fonts.gstatic.com/s/crimsontext/v6/3IFMwfRa07i-auYR-B-zNYnF5uFdDttMLvmWuJdhhgs.ttf) format('truetype')}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:600;src:local('Crimson Text Semibold'),local('CrimsonText-Semibold'),url(https://fonts.gstatic.com/s/crimsontext/v6/rEy5tGc5HdXy56Xvd4f3I1FZMcfX2SbzQ69I7OWmkGo.ttf) format('truetype')}
+    </style>
+
+    
+
+  </head>
+  <body>
+  <div class="container">
+  <div class="row">
+    <div class="column" style="margin-top: 15%">
+      <h1><a href="/" style="background-color: transparent;">
+        
+          Using Lua with C++
+        
+        
+        — <small>A short tutorial</small>
+        
+      </h1>
+      <p class="sans-serif author">
+        <b>By <a href="/" style="background-color:transparent;">Christian Stigen Larsen</a></b>
+        <br/>
+        
+        
+        
+          Posted 20 Oct 2006 &mdash; updated 15 May 2016
+        
+      </p>
+    <p>In this short tutorial I&#39;ll show how to run Lua programs from C and C++ and how
+to expose functions to them. It&#39;s easy!</p>
+
+<p><strong>Update:</strong> The code in this post has been updated for Lua 5.2.4. I haven&#39;t
+checked if the Lua 5.3 C API is backwards-compatible with 5.2. All the code
+here is available <a href="https://github.com/cslarsen/lua-cpp">on GitHub</a>.</p>
+
+<p>The first program will just create a Lua state object and exit. It will be a
+hybrid between C and C++. Since the two languages must include different files,
+we need to discern between them by checking for the existence of the
+<code>__cplusplus</code> macro.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">#ifdef __cplusplus
+# include &lt;lua5.2/lua.hpp&gt;
+#else
+# include &lt;lua5.2/lua.h&gt;
+# include &lt;lua5.2/lualib.h&gt;
+# include &lt;lua5.2/lauxlib.h&gt;
+#endif
+
+int main()
+{
+  lua_State *state = luaL_newstate();
+  lua_close(state);
+  return 0;
+}
+</code></pre></figure>
+<p>Notice that I&#39;m being explicit about which version of Lua I&#39;m using in the
+code. If you trust that the Lua developers care about compatibility, you can
+just <code>#include &lt;lua.hpp&gt;</code> and so on directly.</p>
+
+<p>The purpose of the program is just to make sure that we can compile, link and
+run it without errors.</p>
+
+<p>You need to let the compiler know where it can find the include files and the
+Lua shared library. The include files are usually located in
+<code>/usr/local/include</code> and the library files in <code>/usr/local/lib</code>. Search your
+system directories if needed.  To compile the above program, pass the
+directories with <code>-I</code> and <code>-L</code>, respectively.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ g++ -W -Wall -g -o first first.cpp \
+    -I/usr/local/include -L/usr/local/lib -llua
+</code></pre></figure>
+<p>You may swap out <code>g++</code> with <code>llvm-g++</code>, or just <code>c++</code>, depending on your
+compiler. If you&#39;re using a C compiler, use <code>gcc</code> or <code>llvm-gcc</code> — but
+remember to rename the file to <code>first.c</code>.</p>
+
+<p>Now try to run the program to make sure it doesn&#39;t segfault:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ ./first
+$ echo $?
+0
+</code></pre></figure>
+<p>This one worked just fine.</p>
+
+<h2>Executing Lua programs from a host</h2>
+
+<p>The next step is to execute Lua programs from your C or C++ code. We&#39;ll create
+the Lua state object as above, load a file from disk and execute it.</p>
+
+<p>Put this into <code>runlua.cpp</code> or <code>runlua.c</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">#include &lt;stdio.h&gt;
+
+#ifdef __cplusplus
+# include &lt;lua5.2/lua.hpp&gt;
+#else
+# include &lt;lua5.2/lua.h&gt;
+# include &lt;lua5.2/lualib.h&gt;
+# include &lt;lua5.2/lauxlib.h&gt;
+#endif
+
+void print_error(lua_State* state) {
+  // The error message is on top of the stack.
+  // Fetch it, print it and then pop it off the stack.
+  const char* message = lua_tostring(state, -1);
+  puts(message);
+  lua_pop(state, 1);
+}
+
+void execute(const char* filename)
+{
+  lua_State *state = luaL_newstate();
+
+  // Make standard libraries available in the Lua object
+  luaL_openlibs(state);
+
+  int result;
+
+  // Load the program; this supports both source code and bytecode files.
+  result = luaL_loadfile(state, filename);
+
+  if ( result != LUA_OK ) {
+    print_error(state);
+    return;
+  }
+
+  // Finally, execute the program by calling into it.
+  // Change the arguments if you&#39;re not running vanilla Lua code.
+
+  result = lua_pcall(state, 0, LUA_MULTRET, 0);
+
+  if ( result != LUA_OK ) {
+    print_error(state);
+    return;
+  }
+}
+
+int main(int argc, char** argv)
+{
+  if ( argc &lt;= 1 ) {
+    puts(&quot;Usage: runlua file(s)&quot;);
+    puts(&quot;Loads and executes Lua programs.&quot;);
+    return 1;
+  }
+
+  // Execute all programs on the command line
+  for ( int n=1; n&lt;argc; ++n ) {
+    execute(argv[n]);
+  }
+
+  return 0;
+}
+</code></pre></figure>
+<p>You can reuse the compilation arguments from above:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ g++ -W -Wall -g -I/usr/local/include \
+    -L/usr/local/lib -llua runlua.cpp -o runlua
+</code></pre></figure>
+<p>or</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ gcc -W -Wall -g -I/usr/local/include \
+    -L/usr/local/lib -llua runlua.c -o runlua
+</code></pre></figure>
+<h2>Running Lua programs</h2>
+
+<p>Let&#39;s test this with some Lua programs. The first one prints the Lua version
+and exits.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">io.write(string.format(&quot;Hello from %s\n&quot;, _VERSION))
+</code></pre></figure>
+<p>You may want to double-check that it works by running <code>lua hello.lua</code>. It may
+not be important for this trivial program, but can become important when you
+try more advanced ones.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ lua lua/hello.lua
+Hello from Lua 5.2
+</code></pre></figure>
+<p>Now try it with <code>runlua</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ ./runlua lua/hello.lua
+Hello from Lua 5.2
+</code></pre></figure>
+<p>You can even run bytecode-compiled programs:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ luac -o lua/hello.luac lua/hello.lua
+$ ./runlua lua/hello.luac
+Hello from Lua 5.2
+</code></pre></figure>
+<p>We should also check that the error handling works. Put some garbage in a file
+called <code>error.lua</code>, for example</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">This file is not a Lua program.
+</code></pre></figure>
+<p>Running it produces</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ ./runlua lua/error.lua
+lua/error.lua:1: syntax error near &#39;is&#39;
+</code></pre></figure>
+<h2>Calling C functions from Lua</h2>
+
+<p>It gets very interesting when Lua programs call back to your C or C++
+functions. We&#39;ll create a function called <code>howdy</code> that prints its input
+arguments and returns the integer 123.</p>
+
+<p>To be on the safe side, we&#39;ll declare C linkage for the function in the C++
+version of the program. This has to do with <a
+href="https://en.wikipedia.org/wiki/Name_mangling#C.2B.2B">name mangling</a>,
+but in this case, it really doesn&#39;t matter: Lua just receives a pointer to a
+function, and that&#39;s that. But if you start using dynamic loading of shared
+libraries through <code>dlopen</code> and <code>dlsym</code>, this will be an issue. So let&#39;s do it
+correct from the start.</p>
+
+<p>Copy the above program into a file called <code>callback.cpp</code> and add the <code>howdy</code>
+function.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">#ifdef __cplusplus
+extern &quot;C&quot;
+#endif
+int howdy(lua_State* state)
+{
+  // The number of function arguments will be on top of the stack.
+  int args = lua_gettop(state);
+
+  printf(&quot;howdy() was called with %d arguments:\n&quot;, args);
+
+  for ( int n=1; n&lt;=args; ++n) {
+    printf(&quot;  argument %d: &#39;%s&#39;\n&quot;, n, lua_tostring(state, n));
+  }
+
+  // Push the return value on top of the stack. NOTE: We haven&#39;t popped the
+  // input arguments to our function. To be honest, I haven&#39;t checked if we
+  // must, but at least in stack machines like the JVM, the stack will be
+  // cleaned between each function call.
+
+  lua_pushnumber(state, 123);
+
+  // Let Lua know how many return values we&#39;ve passed
+  return 1;
+}
+</code></pre></figure>
+<p>We have to pass the address of this function to Lua along with a name. Put the
+following line somewhere between the call to <code>lua_newstate</code> and
+<code>luaL_loadfile</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">// Make howdy() available to Lua programs under the same name.
+lua_register(state, &quot;howdy&quot;, howdy);
+</code></pre></figure>
+<p>Create a test program called <code>callback.lua</code></p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">io.write(&quot;Calling howdy() ...\n&quot;)
+local value = howdy(&quot;First&quot;, &quot;Second&quot;, 112233)
+io.write(string.format(&quot;howdy() returned: %s\n&quot;, tostring(value)))
+</code></pre></figure>
+<p>Compile and test it</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ g++ -W -Wall -g -I/usr/local/include -L/usr/local/lib \
+    -llua  callback.cpp -o callback
+$ ./callback lua/callback.lua
+Calling howdy() ...
+howdy() was called with 3 arguments:
+  argument 1: &#39;First&#39;
+  argument 2: &#39;Second&#39;
+  argument 3: &#39;112233&#39;
+howdy() returned: 123
+</code></pre></figure>
+<p>I told you it was easy!</p>
+
+<h2>What next?</h2>
+
+<p>Read the <a href="https://www.lua.org/manual/5.2/manual.html#4">Lua C API
+Reference</a>. You&#39;ve learned enough now to get going with it. Did you see my
+note about clearing the stack in <code>howdy</code>? You may want to investigate that.</p>
+
+<p>Find out how to integrate Lua closures with your C functions.</p>
+
+<p>If you want to hide or catch console output from Lua, you need to figure that
+out as well. I once did it by trapping <code>io.write()</code>; I copied its code from
+<code>lualib.c</code> and changed <code>io_write</code> to point to my own function. There is
+probably a better way to do it, though. Doing so is useful for things like game
+programming.</p>
+
+<p>Use <a
+href="https://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization">RAII</a>
+or smart pointers to manage resources like <code>lua_State</code>.</p>
+
+<p>I also strongly recommend to try out <a href="http://luajit.org">LuaJIT</a>.
+Calling into your functions there is even easier, using LuaJIT&#39;s foreign
+function library. <a href="/post/luajit-cpp">I&#39;ll write a blog post on how to
+do that as well</a>. In short, just create ordinary C functions, compile as a
+shared library, copy their signatures into pure Lua source code and hook them
+up with <a href="http://luajit.org/ext_ffi_tutorial.html">LuaJIT&#39;s FFI
+library</a>.</p>
+
+<p>LuaJIT runs between 10-20 and up to 135 times faster than interpreted Lua, so
+it&#39;s definitely worth it.</p>
+
+    </div>
+  </div>
+
+  
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+        var disqus_shortname = 'christianstigenlarsen'; // must be global
+        var disqus_loaded = false;
+
+        function load_disqus()
+        {
+          if (disqus_loaded)
+            return;
+          else
+            disqus_loaded = true;
+
+          var dsq = document.createElement('script');
+          dsq.type = 'text/javascript';
+          dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        }
+
+        window.onscroll = function(e) {
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight)
+            load_disqus();
+        }
+      </script>
+    </div>
+  </div>
+  
+
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <footer>
+        <p>
+        &copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+  </body>
+</html>
