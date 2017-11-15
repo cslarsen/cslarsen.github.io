@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+	<channel>
+		<title>Christian Stigen Larsen</title>
+		<description>Personal homepage with posts mainly on programming</description>		
+		<link>https://csl.name</link>
+		<atom:link href="https://csl.name/feed.xml" rel="self" type="application/rss+xml" />
+		
+			<item>
+				<title>Writing a basic x86-64 JIT compiler from scratch in stock Python</title>
+				        
+				
+					<description>&lt;p&gt;In this post I&amp;#39;ll show how to write a rudimentary, native x86-64 &lt;a href=&quot;https://en.wikipedia.org/wiki/Just-in-time_compilation&quot;&gt;just-in-time
+compiler (JIT)&lt;/a&gt; in CPython, using only the built-in modules.&lt;/p&gt;
+</description>
+				
+				<pubDate>Wed, 08 Nov 2017 21:03:00 +0000</pubDate>
+				<link>https://csl.name/post/python-jit/</link>
+				<guid isPermaLink="true">https://csl.name/post/python-jit/</guid>
+			</item>
+		
+			<item>
+				<title>Embedding binary data in executables</title>
+				        
+				
+					<description>&lt;p&gt;Applications usually load resources like images from disk. But, in some
+situations, it may be better to embed binary data right into the executable
+file. Here are a few ways to do that.&lt;/p&gt;
+</description>
+				
+				<pubDate>Tue, 07 Jun 2016 23:45:40 +0000</pubDate>
+				<link>https://csl.name/post/embedding-binary-data/</link>
+				<guid isPermaLink="true">https://csl.name/post/embedding-binary-data/</guid>
+			</item>
+		
+			<item>
+				<title>Sending raw Ethernet frames from Python</title>
+				        
+				
+					<description>&lt;p&gt;Sometimes you just &lt;em&gt;need&lt;/em&gt; to send raw Ethernet frames directly on the network.
+Seriously, it has its uses: Perhaps you&amp;#39;re constructing your own non-IP network
+for research or performance, you need to interface with some weird device on
+the local network, or you&amp;#39;re just playing around for fun.  I used it
+extensively while researching use of &lt;a
+href=&quot;https://en.wikipedia.org/wiki/OpenFlow&quot;&gt;OpenFlow&lt;/a&gt; with &lt;a
+href=&quot;http://mininet.org&quot;&gt;Mininet&lt;/a&gt;.&lt;/p&gt;
+</description>
+				
+				<pubDate>Mon, 06 Jun 2016 22:30:30 +0000</pubDate>
+				<link>https://csl.name/post/raw-ethernet-frames/</link>
+				<guid isPermaLink="true">https://csl.name/post/raw-ethernet-frames/</guid>
+			</item>
+		
+			<item>
+				<title>How GCC fixes bad hand-optimizations</title>
+				        
+				
+					<description>&lt;p&gt;The GCC and LLVM optimizers contain &lt;a
+href=&quot;http://www.fefe.de/source-code-optimization.pdf&quot;&gt;troves of arcane and
+esoteric tricks&lt;/a&gt; to speed up code on different systems. Rather surprisingly,
+GCC will even correct bad hand-optimizations!&lt;/p&gt;
+</description>
+				
+				<pubDate>Sat, 04 Jun 2016 23:00:24 +0000</pubDate>
+				<link>https://csl.name/post/gcc-optimization-fix/</link>
+				<guid isPermaLink="true">https://csl.name/post/gcc-optimization-fix/</guid>
+			</item>
+		
+			<item>
+				<title>Writing a shared C++ library and loading it in LuaJIT</title>
+				        
+				
+					<description>&lt;p&gt;This tutorial shows how to create a shared library in C and C++, and how to
+load it in &lt;a href=&quot;http://luajit.org&quot;&gt;LuaJIT&lt;/a&gt; using its foreign-function interface (FFI).
+The code here is &lt;a href=&quot;https://github.com/cslarsen/luajit-cpp&quot;&gt;available on GitHub&lt;/a&gt;.&lt;/p&gt;
+</description>
+				
+				<pubDate>Sun, 15 May 2016 05:25:47 +0000</pubDate>
+				<link>https://csl.name/post/luajit-cpp/</link>
+				<guid isPermaLink="true">https://csl.name/post/luajit-cpp/</guid>
+			</item>
+		
+			<item>
+				<title>Lambdas, macros and continuations in Scheme — a tutorial</title>
+				        
+				
+					<description>&lt;p class=&quot;lead&quot;&gt;
+I gave an &lt;a href=&quot;https://speakerdeck.com/csl/r7rs-scheme&quot;&gt;introductory talk
+on R&lt;sup&gt;7&lt;/sup&gt;RS Scheme&lt;/a&gt; in 2013 that included some neat examples using
+closures, continuations and macros. This article expands on that, intended for
+anyone curious about those concepts.
+&lt;/p&gt;
+</description>
+				
+				<pubDate>Sat, 07 May 2016 07:30:18 +0000</pubDate>
+				<link>https://csl.name/post/lambda-macros-continuations/</link>
+				<guid isPermaLink="true">https://csl.name/post/lambda-macros-continuations/</guid>
+			</item>
+		
+			<item>
+				<title>Commodore 64 assembly coding on the command line</title>
+				        
+				
+					<description>&lt;p class=&quot;lead&quot;&gt;
+Have you ever had this nagging feeling that you're less worth because you never
+actually coded assembly on the C64? Of course you have! Fortunately, here's how
+you can finally do something about it, using the OS X or Linux command line.
+&lt;/p&gt;
+</description>
+				
+				<pubDate>Fri, 06 May 2016 21:37:13 +0000</pubDate>
+				<link>https://csl.name/post/c64-coding/</link>
+				<guid isPermaLink="true">https://csl.name/post/c64-coding/</guid>
+			</item>
+		
+			<item>
+				<title>Imputing the presence of the HLA-B27 antigen using your 23andMe genome</title>
+				        
+				
+					<description>&lt;p class=&quot;lead&quot;&gt;
+Recently, I wanted to see if I could &lt;a
+href=&quot;https://en.wikipedia.org/wiki/Imputation_(genetics)&quot;&gt;impute&lt;/a&gt; the
+presence of the &lt;a href=&quot;https://en.wikipedia.org/wiki/HLA-B27&quot;&gt;HLA-B27
+antigen&lt;/a&gt; using my raw 23andMe DNA data. This is a pretty important antigen,
+because it is associated with several diseases. Although I used a very
+small reference data set, I managed to get a rough result that happened to
+coincide with a blood test.
+&lt;/p&gt;
+</description>
+				
+				<pubDate>Tue, 23 Feb 2016 21:18:00 +0000</pubDate>
+				<link>https://csl.name/post/hla-b27/</link>
+				<guid isPermaLink="true">https://csl.name/post/hla-b27/</guid>
+			</item>
+		
+			<item>
+				<title>Using GNU Global with C++ and Git</title>
+				        
+				
+					<description>&lt;p class=&quot;lead&quot;&gt;
+&lt;a href=&quot;https://www.gnu.org/software/global/&quot;&gt;GNU global&lt;/a&gt; is a very
+compelling way to quickly search your project from the command line.  Here I
+show how to index your code and update it automatically when using git.
+&lt;/p&gt;
+</description>
+				
+				<pubDate>Tue, 23 Feb 2016 19:19:20 +0000</pubDate>
+				<link>https://csl.name/post/gtags/</link>
+				<guid isPermaLink="true">https://csl.name/post/gtags/</guid>
+			</item>
+		
+			<item>
+				<title>Adding a TLS certificate to your NearlyFreeSpeech site</title>
+				        
+				
+					<description>&lt;p&gt;I recently had to renew the TLS certificate on &lt;a href=&quot;https://csl.name&quot;&gt;csl.name&lt;/a&gt;,
+which is hosted on &lt;a href=&quot;https://www.nearlyfreespeech.net&quot;&gt;NearlyFreeSpeech (NFSN)&lt;/a&gt;.
+But I had forgotten how to. So I decided to post a &lt;a href=&quot;https://www.mc-guinness.co.uk/blog/20150710/set-up-https-ssl-tls-encryption-access-to-nearlyfreespeech-hosted-sites/&quot;&gt;condensed version of the
+steps found here&lt;/a&gt; on my own site.&lt;/p&gt;
+</description>
+				
+				<pubDate>Sat, 23 Jan 2016 21:54:29 +0000</pubDate>
+				<link>https://csl.name/post/tls-nfsn/</link>
+				<guid isPermaLink="true">https://csl.name/post/tls-nfsn/</guid>
+			</item>
+		
+	</channel>
+</rss>
