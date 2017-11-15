@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Rendering the Mandelbrot Set</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="author" content="Christian Stigen Larsen" />
+    <meta name="description" content="" />
+
+    
+    <link rel="prefetch" href="/">
+
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS"
+          href="/feed.xml" />
+
+    <style type="text/css">
+    /*! normalize.css v3.0.2 | MIT License | git.io/normalize */html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary{display:block}audio,canvas,progress,video{display:inline-block;vertical-align:baseline}audio:not([controls]){display:none;height:0}[hidden],template{display:none}a{background-color:transparent}a:active,a:hover{outline:0}abbr[title]{border-bottom:1px dotted}b,strong{font-weight:bold}dfn{font-style:italic}h1{font-size:2em;margin:.67em 0}mark{background:#ff0;color:#000}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sup{top:-0.5em}sub{bottom:-0.25em}img{border:0}svg:not(:root){overflow:hidden}figure{margin:1em 40px}hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}pre{overflow:auto}code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}button{overflow:visible}button,select{text-transform:none}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}button[disabled],html input[disabled]{cursor:default}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{height:auto}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}legend{border:0;padding:0}textarea{overflow:auto}optgroup{font-weight:bold}table{border-collapse:collapse;border-spacing:0}td,th{padding:0}.container{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 20px;box-sizing:border-box}.column,.columns{width:100%;float:left;box-sizing:border-box}@media(min-width:400px){.container{width:85%;padding:0}}@media(min-width:550px){.container{width:80%}.column,.columns{margin-left:4%}.column:first-child,.columns:first-child{margin-left:0}.one.column,.one.columns{width:4.66666666667%}.two.columns{width:13.3333333333%}.three.columns{width:22%}.four.columns{width:30.6666666667%}.five.columns{width:39.3333333333%}.six.columns{width:48%}.seven.columns{width:56.6666666667%}.eight.columns{width:65.3333333333%}.nine.columns{width:74%}.ten.columns{width:82.6666666667%}.eleven.columns{width:91.3333333333%}.twelve.columns{width:100%;margin-left:0}.one-third.column{width:30.6666666667%}.two-thirds.column{width:65.3333333333%}.one-half.column{width:48%}.offset-by-one.column,.offset-by-one.columns{margin-left:8.66666666667%}.offset-by-two.column,.offset-by-two.columns{margin-left:17.3333333333%}.offset-by-three.column,.offset-by-three.columns{margin-left:26%}.offset-by-four.column,.offset-by-four.columns{margin-left:34.6666666667%}.offset-by-five.column,.offset-by-five.columns{margin-left:43.3333333333%}.offset-by-six.column,.offset-by-six.columns{margin-left:52%}.offset-by-seven.column,.offset-by-seven.columns{margin-left:60.6666666667%}.offset-by-eight.column,.offset-by-eight.columns{margin-left:69.3333333333%}.offset-by-nine.column,.offset-by-nine.columns{margin-left:78.0}.offset-by-ten.column,.offset-by-ten.columns{margin-left:86.6666666667%}.offset-by-eleven.column,.offset-by-eleven.columns{margin-left:95.3333333333%}.offset-by-one-third.column,.offset-by-one-third.columns{margin-left:34.6666666667%}.offset-by-two-thirds.column,.offset-by-two-thirds.columns{margin-left:69.3333333333%}.offset-by-one-half.column,.offset-by-one-half.columns{margin-left:52%}}html{font-size:62.5%}body{font-size:1.5em;line-height:1.6;font-weight:400;font-family:"Raleway","HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif;color:#222}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:2rem;font-weight:300}h1{font-size:4.0rem;line-height:1.2;letter-spacing:-.1rem}h2{font-size:3.6rem;line-height:1.25;letter-spacing:-.1rem}h3{font-size:3.0rem;line-height:1.3;letter-spacing:-.1rem}h4{font-size:2.4rem;line-height:1.35;letter-spacing:-.08rem}h5{font-size:1.8rem;line-height:1.5;letter-spacing:-.05rem}h6{font-size:1.5rem;line-height:1.6;letter-spacing:0}@media(min-width:550px){h1{font-size:5.0rem}h2{font-size:4.2rem}h3{font-size:3.6rem}h4{font-size:3.0rem}h5{font-size:2.4rem}h6{font-size:1.5rem}}p{margin-top:0}a{color:#1eaedb}a:hover{color:#0fa0ce}.button,button,input[type="submit"],input[type="reset"],input[type="button"]{display:inline-block;height:38px;padding:0 30px;color:#555;text-align:center;font-size:11px;font-weight:600;line-height:38px;letter-spacing:.1rem;text-transform:uppercase;text-decoration:none;white-space:nowrap;background-color:transparent;border-radius:4px;border:1px solid #bbb;cursor:pointer;box-sizing:border-box}.button:hover,button:hover,input[type="submit"]:hover,input[type="reset"]:hover,input[type="button"]:hover,.button:focus,button:focus,input[type="submit"]:focus,input[type="reset"]:focus,input[type="button"]:focus{color:#333;border-color:#888;outline:0}.button.button-primary,button.button-primary,input[type="submit"].button-primary,input[type="reset"].button-primary,input[type="button"].button-primary{color:#FFF;background-color:#33c3f0;border-color:#33c3f0}.button.button-primary:hover,button.button-primary:hover,input[type="submit"].button-primary:hover,input[type="reset"].button-primary:hover,input[type="button"].button-primary:hover,.button.button-primary:focus,button.button-primary:focus,input[type="submit"].button-primary:focus,input[type="reset"].button-primary:focus,input[type="button"].button-primary:focus{color:#FFF;background-color:#1eaedb;border-color:#1eaedb}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea,select{height:38px;padding:6px 10px;background-color:#fff;border:1px solid #d1d1d1;border-radius:4px;box-shadow:none;box-sizing:border-box}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea{-webkit-appearance:none;-moz-appearance:none;appearance:none}textarea{min-height:65px;padding-top:6px;padding-bottom:6px}input[type="email"]:focus,input[type="number"]:focus,input[type="search"]:focus,input[type="text"]:focus,input[type="tel"]:focus,input[type="url"]:focus,input[type="password"]:focus,textarea:focus,select:focus{border:1px solid #33c3f0;outline:0}label,legend{display:block;margin-bottom:.5rem;font-weight:600}fieldset{padding:0;border-width:0}input[type="checkbox"],input[type="radio"]{display:inline}label>.label-body{display:inline-block;margin-left:.5rem;font-weight:normal}ul{list-style:circle inside}ol{list-style:decimal inside}ol,ul{padding-left:0;margin-top:0}ul ul,ul ol,ol ol,ol ul{margin:1.5rem 0 1.5rem 3rem;font-size:90%}li{margin-bottom:1rem}code{padding:.2rem .5rem;margin:0 .2rem;font-size:80%;white-space:nowrap}pre>code{display:block;padding:1rem 1.5rem;white-space:pre}@media(max-width:640px){code{margin:0;padding:0}pre>code{padding:0;margin:0}}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #e1e1e1}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}button,.button{margin-bottom:1rem}input,textarea,select,fieldset{margin-bottom:1.5rem}pre,blockquote,dl,figure,table,p,ul,ol,form{margin-bottom:2.5rem}.u-full-width{width:100%;box-sizing:border-box}.u-max-full-width{max-width:100%;box-sizing:border-box}.u-pull-right{float:right}.u-pull-left{float:left}hr{margin-top:3rem;margin-bottom:3.5rem;border-width:0;border-top:1px solid #e1e1e1}.container:after,.row:after,.u-cf{content:"";display:table;clear:both}body{font-family:"Crimson Text",serif;font-size:2.1rem;text-align:justify;text-justify:inter-word;color:black}footer{font-size:small;font-family:"Helvetica",sans-serif}h1{text-align:left;font-weight:bold}h2{text-align:left;font-weight:bold}.plaintable{border:0;vertical-align:top;padding:6px 12px}.plaintable a{background-color:transparent}.sans-serif{font-family:"Helvetica",sans-serif}ul li{list-style-type:disc}.author{font-size:1.7rem;padding:0rem}a{text-decoration:none;background-color:#eafffa;color:black}mark{background-color:#ffe8f8}h1 a:hover{color:black}a:hover{color:black}code{border:0;color:black}p code{color:#233a31}@media(max-width:800px){figure{padding:0;margin:0}body{text-align:left}.hidesmall{display:none}}@media(min-width:900px){figure{padding:0;margin:1em}ul,ol{padding-left:2em}.hidesmall{display:block}}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:400;src:local('Crimson Text'),local('CrimsonText-Roman'),url(https://fonts.gstatic.com/s/crimsontext/v6/3IFMwfRa07i-auYR-B-zNYnF5uFdDttMLvmWuJdhhgs.ttf) format('truetype')}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:600;src:local('Crimson Text Semibold'),local('CrimsonText-Semibold'),url(https://fonts.gstatic.com/s/crimsontext/v6/rEy5tGc5HdXy56Xvd4f3I1FZMcfX2SbzQ69I7OWmkGo.ttf) format('truetype')}
+    </style>
+
+    
+
+  </head>
+  <body>
+  <div class="container">
+  <div class="row">
+    <div class="column" style="margin-top: 15%">
+      <h1><a href="/" style="background-color: transparent;">
+        
+          Rendering the Mandelbrot Set
+        
+        
+        — <small>with an example implementation in javascript</small>
+        
+      </h1>
+      <p class="sans-serif author">
+        <b>By <a href="/" style="background-color:transparent;">Christian Stigen Larsen</a></b>
+        <br/>
+        
+        
+        
+          Posted 22 Feb 2012 &mdash; updated 06 Dec 2014
+        
+      </p>
+    <p>In 2012, I made a <a href="https://csl.name/mandelbrot/">Mandelbrot renderer in
+JavaScript</a>. Here I will explain how you can do it yourself, including how
+to implement smooth coloring and making it fast.</p>
+
+<p>
+  <img class="u-max-full-width"
+       src="/gfx/post/mandelbrot-2.jpg"
+       alt="The Mandelbrot Set" />
+</p>
+
+<h2>Theory</h2>
+
+<p>The famous <a href="https://en.wikipedia.org/wiki/Mandelbrot_set">Mandelbrot set</a> is
+a set of points in the complex plane.  In essence, what we want to find out
+is if the iterative function C below will <em>converge</em> to some constant or <em>diverge</em>
+to infinity.</p>
+
+<p>The definition is simply</p>
+
+<blockquote>
+<p>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</p>
+</blockquote>
+
+<p>with the initial condition simply formed by taking the coordinates in the
+complex plane,</p>
+
+<blockquote>
+<p>z<sub>0</sub> = c = x + iy</p>
+</blockquote>
+
+<p>Pretend for a moment that you&#39;ve never seen the Mandelbrot plot before.
+By only looking at the definition above, can you guess how it would look like when
+rendered? First we need to look at a few expansions of z expressed with 
+<span>x</span> and <span>y</span>.</p>
+
+<blockquote>
+<p>z<sub>0</sub> = x + iy</p>
+
+<p>z<sub>1</sub> = (x + iy)<sup>2</sup> + (x + iy) =
+ (x<sup>2</sup> - y<sup>2</sup> + x) + i(2xy + y)</p>
+
+<p>z<sub>2</sub> = z<sub>1</sub><sup>2</sup> + (x + iy) = ...</p>
+</blockquote>
+
+<p>So, as <span>n &rarr; &infin;</span>, for which values of <span>x</span> and
+<span>y</span> will <span>z<sub>n</sub></span> converge, and for which will it
+diverge?</p>
+
+<p>Well, for large values of <span>|x|</span> and small for <span>|y|</span>
+(points close to origo), the sequence might diverge, because
+<span>x<sup>2</sup></span> would be dominating over <span>y<sup>2</sup></span>.
+Diverged points are painted black, so we can guess that the plot will be black
+in all directions some distance from origo.</p>
+
+<div>
+<i>
+<b>Note:</b> The mathematical description here is very imprecise.
+
+Starting with <span>x</span> and <span>y</span>, for each iteration you'll get
+a new expression <span>a + ib</span>, i.e. a new point at <span>(a,b)</span>.
+As you iterate, you jump to new points in the complex plane.  For
+convergent sequences, we will jump closer and closer to an attractor point
+&mdash; usually curving towards it instead of a straight line.
+
+For the Mandelbrot set, it means that if
+any point lands outside a circle with radius two around origo, the sequence
+will diverge.
+
+<p class="u-pull-right">
+  <a href="https://en.wikipedia.org/wiki/Complex_quadratic_polynomial#Critical_orbit">Read more on Wikipedia</a>
+</p>
+</i>
+</div>
+
+<p>But for points close to origo &mdash; say, <span>|x|</span> and
+<span>|y|</span> less than 1 &mdash; we would expect it to converge, because
+the product of two numbers less than one will always be smaller than each of
+its parts, giving small values for <span>x<sup>2</sup> - y<sup>2</sup></span>.  So in a
+circle around origo with a radius of one, we&#39;d expect to see colored pixels.</p>
+
+<p>But what if the signs of x and y differ? Then things quickly get more
+complicated.  In fact, if we plot using a computer, we won&#39;t get a
+nice colored disc centered at origo.  What we get is an infinitely complex and
+fractured plot.</p>
+
+<p>We can even zoom endlessly into the plot and it will <em>still</em> be as
+non-uniform and complex as before.  While a disc would have a dimension of two,
+a fractal has a so-called so-called <a href="http://en.wikipedia.org/wiki/Hausdorff_dimension">Hausdorff dimension</a>
+which is something in between a line and a plane.  We&#39;d get a non-integer
+dimension; a <em>fractal</em>.</p>
+
+<h2>Calculating the Mandelbrot Set</h2>
+
+<p>Calculating the Mandelbrot set numerically is easy.</p>
+
+<p>Given the equations above, take any point <span>z<sub>0</sub> = (x, y)</span>
+and then calculate <span>z<sub>1</sub> = (x+iy)<sup>2</sup> + (x+iy)</span> and
+continue doing this.  For practical purposes, let&#39;s decide on a <em>threshold</em>
+value.  If the magnitude of <span>z</span> &mdash; the distance to origo, or
+<span>&radic;(x^2+y^2)</span>&mdash; ever becomes larger than this threshold
+value we will assume that it will diverge into infinity.  If so, stop the
+calculation and plot a <em>black dot</em> at the current location.</p>
+
+<p><i>
+For the Mandelbrot set, it can be shown that the threshold value is exactly two, i.e.
+any sequence with a <span>|z<sub>n</sub>| &gt; 2</span> will diverge.
+<span class="u-pull-right">
+  <a href="http://www.mi.sanu.ac.rs/vismath/javier/b2.htm">Read more about this</a>.
+</span>
+</i></p>
+
+<p>If <span>|z|</span> has not exceeded the threshold value after a predecided
+number of iterations (which we choose at will), we will assume that the current
+parameters makes the function converge.  In this case, plot a non-black dot at
+the current location.</p>
+
+<h2>Colorizing the plot</h2>
+
+<p>I said above that if the function diverges, one should plot a non-black dot.
+One could simply paint a white dot here.  But instead, maybe we want to get
+an idea of <em>how fast</em> the function is diverging to infinity at this point.</p>
+
+<p>To do this, just take the current value of the number of steps performed
+and <em>map</em> that against a color spectrum, and paint that color.</p>
+
+<p>So, functions diverging quickly will get about the same color.</p>
+
+<h2>Smooth coloring</h2>
+
+<p>If you use the number of iterations to pick a color, you&#39;ll get ugly color
+bands in the plot.  There is a really cool trick to get smooth, gradual
+color changes.</p>
+
+<p>So, you <em>basically</em> calculate <code>Z = Z^2</code> until it diverges and make a note of
+the iteration count.  What we really want, though, is a <em>fractional</em>
+iteration count, so we can multiply that with a color value to get smooth
+colors.</p>
+
+<p>The trick is to note that when you calculate <code>Z = Z^2</code> you&#39;ll get values <code>Z,
+Z^2, Z^4, Z^8</code> and so on.  If you take the logarithm of this, you&#39;ll get the
+values 1, 2, 4, 8 etc.  If you take the logarithm one more time, you&#39;ll get
+1, 2, 3, 4, 5 etc.  So to get a fractional number of iterations, just do:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">log(log |Z|) / log 2
+</code></pre></figure>
+<p>This is all explained over at <a href="http://linas.org/art-gallery/escape/smooth.html">linas.org</a>.</p>
+
+<p>In my code, I originally used the following smoothing equation:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">1 + n - Math.log(Math.log(Math.sqrt(Zr*Zr+Zi*Zi)))/Math.log(2.0);
+</code></pre></figure>
+<p>With some elementary logarithm rules, we can simplify this to</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">// Some constants
+var logBase = 1.0 / Math.log(2.0);
+var logHalfBase = Math.log(0.5)*logBase;
+// ...
+return 5 + n - logHalfBase - Math.log(Math.log(Tr+Ti))*logBase;
+</code></pre></figure>
+<p>which is faster.  The constant <code>5</code> is another little trick, which should
+be explained in the code itself.</p>
+
+<h2>Anti-aliasing and supersampling</h2>
+
+<p>Finally, when you calculate the color value of a single pixel, it is in
+reality just the color of a single point in the Mandelbrot set that is
+situated somewhere <em>inside</em> that pixel.</p>
+
+<p>What I&#39;m saying is that you&#39;ll basically get pixel artifacts in the image,
+especially in dense areas where the color changes (near the black set, for
+instance).</p>
+
+<p>So what I do is to use random sampling:  Just sample a given number of
+random points inside the pixel and average the sum of the color values.
+This is equivalent to rendering the plot at a higher resolution and scaling
+down.</p>
+
+<p>There are many supersampling techniques to use, and the random sampling was
+chosen because of its simplicity.  The problem is that the resulting picture
+will look a bit blurry (there are ways around this as well).</p>
+
+<h1>Optimizing the calculation for performance</h1>
+
+<p>Calculating the Mandelbrot set is quite slow, but there are a lot of tricks
+to speed it up.</p>
+
+<p>When speeding up any code, the first step (after making the code <em>correct</em>,
+of course) is to look at the algorithm and try to use one with a simpler
+complexity class.  Unfortunately, for the Mandelbrot set, this isn&#39;t really
+possible.  So the tricks mentioned here are all cases of 
+<em>micro-optimizations</em>.  Nevertheless, they will improve the running time
+quite a lot.</p>
+
+<p>We also have to remember that we&#39;re using Javascript here, which is a
+relatively slow language because of its dynamic nature.  What&#39;s interesting
+in this regard, though, is to identify performance hot spots in the typical
+javascript engines.  It&#39;s interesting to test the code on different browsers.</p>
+
+<h2>Removing the square root operation</h2>
+
+<p>First, let&#39;s look at the inner loop.  It continually calculates the
+magnitude of the complex number C, and compares this with a threshold value.
+Observe that it takes the square root in doing so:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">if ( sqrt(x^2 + y^2) &gt; threshold ) ...
+</code></pre></figure>
+<p>If we just square the treshold value, we should be able to do away with the
+square root operation:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">threshold_squared = threshold^2
+// ...
+if ( (x^2 + y^2) &gt; threshold_squared ) ...
+</code></pre></figure>
+<h2>Taking advantage of symmetry</h2>
+
+<p>You&#39;ve probably noticed that the plot is reflected vertically over the line
+<span>y = 0</span>.  You can take advantage of this mirroring to halve the
+computation time. I don&#39;t, because you&#39;ll mostly render plots that are
+massively zoomed in.</p>
+
+<h2>Splitting up the main equation</h2>
+
+<p>The main equation is</p>
+
+<blockquote>
+<p><span>z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</span></p>
+</blockquote>
+
+<p>Setting <code>C = z</code> and <code>Cr = Re(z)</code> and <code>Ci = Im(z)</code>, we get</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">C_{n+1} = Cr^2 + 2Cr*Ci*i - Ci*Ci + C_{0}
+C_{n+1} = (Cr^2 - Ci^2) + i(2Cr*Ci) + C_{0}
+</code></pre></figure>
+<p>giving us</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Re (C_{n+1}) = Cr^2 - Ci^2 + x
+Im (C_{n+1}) = 2*Cr*Ci + y
+Mag(C_{n+1}) = sqrt(Cr^2 + Ci^2)
+</code></pre></figure>
+<p>If we introduce two variables <code>Tr = Cr^2</code> and <code>Ti = Ci^2</code>, we get</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Re (C_{n+1})   = Tr - Ti + x
+Im (C_{n+1})   = 2*Cr*Ci + y
+Mag(C_{n+1})^2 = Tr + Ti
+Tr             = Re(C_{n+1}))^2
+Ti             = Im(C_{n+1}))^2
+</code></pre></figure>
+<p>So we have now replaced some multiplications with additions, which is
+normally faster in most CPUs.  But, again, this is javascript, and
+javascript has quite a different performance profile.  The code above indeed
+does <em>not</em> give us any <strong>significant</strong> speedup --- for a 640x480 image, we
+only save a hundred milliseconds, or so.</p>
+
+<h2>Fast indexing into the image data struct</h2>
+
+<p>To plot individual pixels in HTML5 canvas, you get an array and you have to
+calculate the array offset for a given coordinate pair.</p>
+
+<p>I.e., given RGBA pixel format (four positions), an (x, y) coordinate pair
+and a width and height, you calculate it by</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">offset = 4*x + 4*y*width
+</code></pre></figure>
+<p>so that you can now set the RGBA values as</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">array[offset+0] = red
+array[offset+1] = green
+array[offset+2] = blue
+array[offset+3] = alpha
+</code></pre></figure>
+<p>There are several ways of optimizing this.  For instance, we can simply
+multiply the whole offset by four, which is the same as shifting all bits
+left two positions.  However, javascript works in mysterious ways, so the
+customary shift operations may not be as fast as in other languages like C
+and C++.  The reason <em>probably</em> has to do with the fact that javascript only
+has <em>one</em> data type for numbers, and my guess is that it&#39;s some kind of
+float.</p>
+
+<p>Anyway, we now have</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">offset = (x + y*width) &lt;&lt; 2
+</code></pre></figure>
+<p>Another trick I&#39;d like to mention.  Say that the width and height are fixed
+to, say 640 and 480, respectively.  And old trick to multiply y by 640 would
+be notice that 640 = 512 + 128 = 2^9 + 2^7, giving us</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">y*640 = y*512 + y*128 = y*2^9 + y*2^7 = y&lt;&lt;9 + y&lt;&lt;7
+</code></pre></figure>
+<p>So now we&#39;ve converted one multiplication into two shifts and an add.  In
+your commodity language and hardware, this might be quite fast in tight
+innerloops.</p>
+
+<p>Anyway, we still want to be able to use arbitrary heights and widths, so
+let&#39;s skip that one.</p>
+
+<p>By far, the fastest way of accessing the array is by doing it sequentially.</p>
+
+<p>That is, instead of doing</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">for ( y=0; y&lt;height; ++y )
+for ( x=0; x&lt;width; ++x ) {
+  // calculate RGBA
+  var offset = 4*(x + y*with);
+  image.data[offset + 0] = R;
+  image.data[offset + 1] = G;
+  image.data[offset + 2] = B;
+  image.data[offset + 3] = A;
+}
+</code></pre></figure>
+<p>a <em>much</em> faster way would be to do</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">var offset = 0;
+for ( y=0; y&lt;height; ++y )
+for ( x=0; x&lt;width; ++x ) {
+  image.data[offset++] = R;
+  image.data[offset++] = G;
+  image.data[offset++] = B;
+  image.data[offset++] = A;
+}
+</code></pre></figure>
+<p>So now we&#39;ve basically saved the work of doing <code>2*width*height</code>
+multiplications, or 600 thousand of them, assuming a 640x480 image.</p>
+
+<h2>Fast copying of the image data</h2>
+
+<p>To draw in the canvas, you request an array, update it and copy it back to
+the canvas.</p>
+
+<p>Of course, you want to reduce the number of such operations.  Because we
+want an animation showing each line as it is drawn, we&#39;ll do this:</p>
+
+<ul>
+<li>Get an image data array</li>
+<li>For each line: Update the array</li>
+<li>For each line: Copy the array back to the canvas</li>
+</ul>
+
+<p>The trick here, though is to <em>not</em> use <code>getImageData</code>.  You&#39;re going to
+overwrite all existing image data, so you can use the same buffer for every
+line.  So instead, we&#39;ll use these operations:</p>
+
+<ul>
+<li>Get a line buffer by calling <code>createImageData(canvas.width, 1)</code></li>
+<li>For each line: Update the line buffer array</li>
+<li>For each line: Call <code>putImageData(linebuffer, 0, y_position)</code> to copy only <em>one</em> line</li>
+</ul>
+
+<p>This ensures that we only copy <em>one</em> line per frame update.</p>
+
+<h2>Embarrassingly parallel</h2>
+
+<p>Since the algorithm above is referentially transparent, meaning that it
+always produces the same output for the same input (where input is defined
+as <code>x, y, steps, threshold</code>), you could in theory calculate all points in
+parallel.</p>
+
+<p>Such algorithms are colloquially called
+<a href="http://en.wikipedia.org/wiki/Embarrassingly_parallel">embarrassingly parallel</a>.</p>
+
+<p>Now, JavaScript is inherently single-threaded:  You can only use so-called
+green threads, meaning that the javascript engine will yield control between
+them.</p>
+
+<p>However, there is a new HTML5 APi called web workers that you can use to
+create real, OS-level threads.  That should make it easy to split up
+plotting into several threads (preferrably one per logical core).</p>
+
+<h2>Using vectorized procedures</h2>
+
+<p>The algorithm is very well suited for vector operations.  Most modern computers
+come with hardware optimizations for such operations (SSE or the GPU, etc.)
+However, we are again limited to what the javascript engines will do for us.</p>
+
+<h2>Even more optimizations</h2>
+
+<p>Take a look at the optimizations done to the Mandelbrot set in
+<a href="http://shootout.alioth.debian.org/u32/performance.php?test=mandelbrot">The Computer Language Benchmarks Game</a></p>
+
+<p>There are a lot of cool tricks going on there.  Most of <em>those</em> use SSE
+parallelism for hardware speedup or offloads to the GPU.</p>
+
+    </div>
+  </div>
+
+  
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+        var disqus_shortname = 'christianstigenlarsen'; // must be global
+        var disqus_loaded = false;
+
+        function load_disqus()
+        {
+          if (disqus_loaded)
+            return;
+          else
+            disqus_loaded = true;
+
+          var dsq = document.createElement('script');
+          dsq.type = 'text/javascript';
+          dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        }
+
+        window.onscroll = function(e) {
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight)
+            load_disqus();
+        }
+      </script>
+    </div>
+  </div>
+  
+
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <footer>
+        <p>
+        &copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+  </body>
+</html>

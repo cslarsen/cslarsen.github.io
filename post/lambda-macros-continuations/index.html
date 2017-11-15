@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Lambdas, macros and continuations in Scheme — a tutorial</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="author" content="Christian Stigen Larsen" />
+    <meta name="description" content="" />
+
+    
+    <link rel="prefetch" href="/">
+
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS"
+          href="/feed.xml" />
+
+    <style type="text/css">
+    /*! normalize.css v3.0.2 | MIT License | git.io/normalize */html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary{display:block}audio,canvas,progress,video{display:inline-block;vertical-align:baseline}audio:not([controls]){display:none;height:0}[hidden],template{display:none}a{background-color:transparent}a:active,a:hover{outline:0}abbr[title]{border-bottom:1px dotted}b,strong{font-weight:bold}dfn{font-style:italic}h1{font-size:2em;margin:.67em 0}mark{background:#ff0;color:#000}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sup{top:-0.5em}sub{bottom:-0.25em}img{border:0}svg:not(:root){overflow:hidden}figure{margin:1em 40px}hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}pre{overflow:auto}code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}button{overflow:visible}button,select{text-transform:none}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}button[disabled],html input[disabled]{cursor:default}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{height:auto}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}legend{border:0;padding:0}textarea{overflow:auto}optgroup{font-weight:bold}table{border-collapse:collapse;border-spacing:0}td,th{padding:0}.container{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 20px;box-sizing:border-box}.column,.columns{width:100%;float:left;box-sizing:border-box}@media(min-width:400px){.container{width:85%;padding:0}}@media(min-width:550px){.container{width:80%}.column,.columns{margin-left:4%}.column:first-child,.columns:first-child{margin-left:0}.one.column,.one.columns{width:4.66666666667%}.two.columns{width:13.3333333333%}.three.columns{width:22%}.four.columns{width:30.6666666667%}.five.columns{width:39.3333333333%}.six.columns{width:48%}.seven.columns{width:56.6666666667%}.eight.columns{width:65.3333333333%}.nine.columns{width:74%}.ten.columns{width:82.6666666667%}.eleven.columns{width:91.3333333333%}.twelve.columns{width:100%;margin-left:0}.one-third.column{width:30.6666666667%}.two-thirds.column{width:65.3333333333%}.one-half.column{width:48%}.offset-by-one.column,.offset-by-one.columns{margin-left:8.66666666667%}.offset-by-two.column,.offset-by-two.columns{margin-left:17.3333333333%}.offset-by-three.column,.offset-by-three.columns{margin-left:26%}.offset-by-four.column,.offset-by-four.columns{margin-left:34.6666666667%}.offset-by-five.column,.offset-by-five.columns{margin-left:43.3333333333%}.offset-by-six.column,.offset-by-six.columns{margin-left:52%}.offset-by-seven.column,.offset-by-seven.columns{margin-left:60.6666666667%}.offset-by-eight.column,.offset-by-eight.columns{margin-left:69.3333333333%}.offset-by-nine.column,.offset-by-nine.columns{margin-left:78.0}.offset-by-ten.column,.offset-by-ten.columns{margin-left:86.6666666667%}.offset-by-eleven.column,.offset-by-eleven.columns{margin-left:95.3333333333%}.offset-by-one-third.column,.offset-by-one-third.columns{margin-left:34.6666666667%}.offset-by-two-thirds.column,.offset-by-two-thirds.columns{margin-left:69.3333333333%}.offset-by-one-half.column,.offset-by-one-half.columns{margin-left:52%}}html{font-size:62.5%}body{font-size:1.5em;line-height:1.6;font-weight:400;font-family:"Raleway","HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif;color:#222}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:2rem;font-weight:300}h1{font-size:4.0rem;line-height:1.2;letter-spacing:-.1rem}h2{font-size:3.6rem;line-height:1.25;letter-spacing:-.1rem}h3{font-size:3.0rem;line-height:1.3;letter-spacing:-.1rem}h4{font-size:2.4rem;line-height:1.35;letter-spacing:-.08rem}h5{font-size:1.8rem;line-height:1.5;letter-spacing:-.05rem}h6{font-size:1.5rem;line-height:1.6;letter-spacing:0}@media(min-width:550px){h1{font-size:5.0rem}h2{font-size:4.2rem}h3{font-size:3.6rem}h4{font-size:3.0rem}h5{font-size:2.4rem}h6{font-size:1.5rem}}p{margin-top:0}a{color:#1eaedb}a:hover{color:#0fa0ce}.button,button,input[type="submit"],input[type="reset"],input[type="button"]{display:inline-block;height:38px;padding:0 30px;color:#555;text-align:center;font-size:11px;font-weight:600;line-height:38px;letter-spacing:.1rem;text-transform:uppercase;text-decoration:none;white-space:nowrap;background-color:transparent;border-radius:4px;border:1px solid #bbb;cursor:pointer;box-sizing:border-box}.button:hover,button:hover,input[type="submit"]:hover,input[type="reset"]:hover,input[type="button"]:hover,.button:focus,button:focus,input[type="submit"]:focus,input[type="reset"]:focus,input[type="button"]:focus{color:#333;border-color:#888;outline:0}.button.button-primary,button.button-primary,input[type="submit"].button-primary,input[type="reset"].button-primary,input[type="button"].button-primary{color:#FFF;background-color:#33c3f0;border-color:#33c3f0}.button.button-primary:hover,button.button-primary:hover,input[type="submit"].button-primary:hover,input[type="reset"].button-primary:hover,input[type="button"].button-primary:hover,.button.button-primary:focus,button.button-primary:focus,input[type="submit"].button-primary:focus,input[type="reset"].button-primary:focus,input[type="button"].button-primary:focus{color:#FFF;background-color:#1eaedb;border-color:#1eaedb}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea,select{height:38px;padding:6px 10px;background-color:#fff;border:1px solid #d1d1d1;border-radius:4px;box-shadow:none;box-sizing:border-box}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea{-webkit-appearance:none;-moz-appearance:none;appearance:none}textarea{min-height:65px;padding-top:6px;padding-bottom:6px}input[type="email"]:focus,input[type="number"]:focus,input[type="search"]:focus,input[type="text"]:focus,input[type="tel"]:focus,input[type="url"]:focus,input[type="password"]:focus,textarea:focus,select:focus{border:1px solid #33c3f0;outline:0}label,legend{display:block;margin-bottom:.5rem;font-weight:600}fieldset{padding:0;border-width:0}input[type="checkbox"],input[type="radio"]{display:inline}label>.label-body{display:inline-block;margin-left:.5rem;font-weight:normal}ul{list-style:circle inside}ol{list-style:decimal inside}ol,ul{padding-left:0;margin-top:0}ul ul,ul ol,ol ol,ol ul{margin:1.5rem 0 1.5rem 3rem;font-size:90%}li{margin-bottom:1rem}code{padding:.2rem .5rem;margin:0 .2rem;font-size:80%;white-space:nowrap}pre>code{display:block;padding:1rem 1.5rem;white-space:pre}@media(max-width:640px){code{margin:0;padding:0}pre>code{padding:0;margin:0}}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #e1e1e1}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}button,.button{margin-bottom:1rem}input,textarea,select,fieldset{margin-bottom:1.5rem}pre,blockquote,dl,figure,table,p,ul,ol,form{margin-bottom:2.5rem}.u-full-width{width:100%;box-sizing:border-box}.u-max-full-width{max-width:100%;box-sizing:border-box}.u-pull-right{float:right}.u-pull-left{float:left}hr{margin-top:3rem;margin-bottom:3.5rem;border-width:0;border-top:1px solid #e1e1e1}.container:after,.row:after,.u-cf{content:"";display:table;clear:both}body{font-family:"Crimson Text",serif;font-size:2.1rem;text-align:justify;text-justify:inter-word;color:black}footer{font-size:small;font-family:"Helvetica",sans-serif}h1{text-align:left;font-weight:bold}h2{text-align:left;font-weight:bold}.plaintable{border:0;vertical-align:top;padding:6px 12px}.plaintable a{background-color:transparent}.sans-serif{font-family:"Helvetica",sans-serif}ul li{list-style-type:disc}.author{font-size:1.7rem;padding:0rem}a{text-decoration:none;background-color:#eafffa;color:black}mark{background-color:#ffe8f8}h1 a:hover{color:black}a:hover{color:black}code{border:0;color:black}p code{color:#233a31}@media(max-width:800px){figure{padding:0;margin:0}body{text-align:left}.hidesmall{display:none}}@media(min-width:900px){figure{padding:0;margin:1em}ul,ol{padding-left:2em}.hidesmall{display:block}}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:400;src:local('Crimson Text'),local('CrimsonText-Roman'),url(https://fonts.gstatic.com/s/crimsontext/v6/3IFMwfRa07i-auYR-B-zNYnF5uFdDttMLvmWuJdhhgs.ttf) format('truetype')}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:600;src:local('Crimson Text Semibold'),local('CrimsonText-Semibold'),url(https://fonts.gstatic.com/s/crimsontext/v6/rEy5tGc5HdXy56Xvd4f3I1FZMcfX2SbzQ69I7OWmkGo.ttf) format('truetype')}
+    </style>
+
+    
+
+  </head>
+  <body>
+  <div class="container">
+  <div class="row">
+    <div class="column" style="margin-top: 15%">
+      <h1><a href="/" style="background-color: transparent;">
+        
+          Lambdas, macros and continuations in Scheme — a tutorial
+        
+        
+      </h1>
+      <p class="sans-serif author">
+        <b>By <a href="/" style="background-color:transparent;">Christian Stigen Larsen</a></b>
+        <br/>
+        
+        
+        
+          07 May 2016
+        
+      </p>
+    <p class="lead">
+I gave an <a href="https://speakerdeck.com/csl/r7rs-scheme">introductory talk
+on R<sup>7</sup>RS Scheme</a> in 2013 that included some neat examples using
+closures, continuations and macros. This article expands on that, intended for
+anyone curious about those concepts.
+</p>
+
+<p>If your programming language supports continuations, you can implement
+<a href="controlflow">any control flow construct</a> in native source code form. That
+means you can import things like</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (goto)
+        (exceptions)
+        (continuable-exceptions)
+        (coroutines)
+        (cooperative-multithreading)
+        (nondeterminism))
+</code></pre></figure>
+<p>I&#39;ll give simple examples on how all of the above can be implemented using
+closures, continuations and macros, using plain <a
+href="http://trac.sacrideo.us/wg/wiki/R7RSHomePage">R<sup>7</sup>RS Scheme</a>.</p>
+
+<p><strong>NOTE:</strong> This post is a work in progress that I&#39;m posting early. The later
+examples doesn&#39;t include explanations, and some are outright missing. Also, if
+I get anything wrong, please let me know in the comments at the bottom.</p>
+
+<p>You can run the examples using <a href="Chibi%20Scheme">Chibi Scheme</a>.</p>
+
+<h1>Creating your first Scheme library</h1>
+
+<p>To get started, we need a function <code>println</code> that simply prints all of its
+arguments. We&#39;ll create a variadic function that simply calls <code>display</code> on all
+its arguments, and put it in a library called <code>print</code>.</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(define-library (print)
+  (import (scheme base)
+          (scheme write))
+  (export println)
+  (begin
+    (define (println . args)
+      &quot;Prints all arguments and a newline.&quot;
+      (for-each display args)
+      (newline))))</code></pre></figure>
+
+<p>Here&#39;s a test program</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base) ; needed for the + function
+        (print))      ; our println function
+
+(println &quot;Testing the print library.&quot;)
+(println &quot;1 + 2 = &quot; (+ 1 2))
+(println &quot;Have a nice day!&quot;)</code></pre></figure>
+
+<p>Running it produces</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ chibi-scheme print-example.scm
+Testing the print library.
+1 + 2 = 3
+Have a nice day!</code></pre></figure>
+
+<h1>What are continuations?</h1>
+
+<p>There are many ways to explain what continuations are, but I will offer two
+mental models that are very useful, with minor trade-offs in exactness.</p>
+
+<p>A continuation represents the rest of the computation. A good way to think
+about this is that whenever you capture a continuation, you essentially set a
+label in the code that you can later jump back to. So it&#39;s almost like a GOTO
+or JUMP instruction, with the additional benefit of being able to pass along
+new values that will replace the value at the location where it jumps to.
+Moreover, when you jump, the code will continue running from that location,
+returning to the correct functions that were active when you first captured the
+continuation.</p>
+
+<p>So, if you have a function that computes some mathematical expression, you can
+surround one of the variables with such a label. Later on, you can back jump to
+this label, but with a new value for that variable.</p>
+
+<p>Here&#39;s an example in pseudo-code that, unintentionally, looks like JavaScript:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">label = null;
+
+function print_person(name, age) {
+  print(&quot;%s is %d years old.&quot;, name, set_label(age));
+}
+
+// At this point, label is still null and cannot be jumped to. The first
+// time we call print_person, set_label will be called, giving label some
+// imaginary value.
+
+print_person(&quot;John Doe&quot;, 123); // prints &quot;John Doe is 123 years old.&quot;
+
+// Now we can jump to the label and pass it the value of 500
+
+goto_label(500); // prints &quot;John Doe is 500 years old.&quot;
+</code></pre></figure>
+<p>The function <code>set_label</code> will insert the current code location into the
+variable <code>label</code> and return its input argument <code>age</code> immediately. After that,
+<code>goto_label</code> will jump back to the location pointed to by <code>label</code> and continue
+execution there, but now with the value of 500.</p>
+
+<p>Running the program should print</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">John Doe is 123 years old.
+John Doe is 500 years old.
+</code></pre></figure>
+<p>Notice that after jumping to the label location, the program will continue
+running at the <code>set_label(age)</code> location. At this point in time, the value of
+<code>500</code> will be returned to the <code>print</code> function, which proceeds to print its
+arguments. Finally, <code>print_person</code> itself has to return, and the return
+location this time around will be right after the <code>goto_label(500)</code> statement.</p>
+
+<h1>Implementing goto</h1>
+
+<p>If we translate the previous example to Scheme, we can implement <code>set_label</code>
+and <code>goto_label</code>.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (scheme write))
+
+; A handy function that prints all of its arguments
+(define (println . args)
+  (for-each display args)
+  (newline))
+
+; ... insert set-label and goto-label here
+
+(define label #f)
+
+(define (print-person name age)
+  (println name &quot; is &quot; (set-label age) &quot; years old.&quot;))
+
+(print-person &quot;John Doe&quot; 123)
+(goto-label 500)
+</code></pre></figure>
+<p>To implement the final two functions, we&#39;ll use <code>call/cc</code>. It has a special
+form:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(call/cc
+  (lambda (continuation)
+    &lt;body&gt;))
+</code></pre></figure>
+<p>Your code goes into <code>&lt;body&gt;</code>, and from there we have access to a variable
+called <code>continuation</code>. It&#39;s actually a special function that lets you exit from
+the surrounding <code>(call/cc ...)</code>-block with a return value. If you do
+<code>(continuation 123)</code>, the program will jump back to the location of the
+original <code>call/cc</code> and continue running from there as if <code>call/cc</code> returned
+<code>123</code>. And you can do that as many times as you want.</p>
+
+<p>For example,</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define set-number-and-run-println-again #f)
+
+; When this runs the first time, 3 will be printed.
+(println (+ 1
+            (call/cc (lambda (k)
+              (set! set-number-and-run-println-again k)
+              2))))
+
+(set-number-and-run-println-again 100)
+; The above will run from the call/cc location, but with the value 100.
+; That value will go into (+ 1 100), which passes 101 to println, which
+; prints it.
+</code></pre></figure>
+<p>Now, the definition of <code>set-label</code> uses the above form:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define (set-label initial-return-value)
+  (call/cc
+    (lambda (continuation)
+      (set! label continuation)
+      initial-return-value)))
+</code></pre></figure>
+<p>The code above will (1) capture the current continuation and put it inside the
+variable <code>continuation</code>, (2) store the continuation in the global variable
+<code>label</code>and (3) return the value <code>initial-return-value</code>.</p>
+
+<p>Remember that our goal is to be able to <em>jump back</em> to where the <code>age</code> variable
+is used, but with new values.</p>
+
+<p>Now, since <code>label</code> will eventually contain a continuation, the implementation
+of <code>goto-label</code> is straight-forward:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define (goto-label new-value)
+  (label new-value))
+</code></pre></figure>
+<p>The final program can be run in <a href="chibi">Chibi Scheme</a>. Put the following in a
+file called <code>print-person.scm</code>:</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
+        (scheme write))
+
+(define (println . args)
+  (for-each display args)
+  (newline))
+
+(define (set-label initial-return-value)
+  (call/cc
+    (lambda (continuation)
+      (set! label continuation)
+      initial-return-value)))
+
+(define (goto-label new-value)
+  (label new-value))
+
+(define label #f)
+
+(define (print-person name age)
+  (println name &quot; is &quot; (set-label age) &quot; years old.&quot;))
+
+(println &quot;Value of label: &quot; label)
+(print-person &quot;John Doe&quot; 123)
+
+(println &quot;Value of label after calling print-person: &quot; label)
+(goto-label 500)
+
+(println &quot;Done!&quot;)</code></pre></figure>
+
+<p>Executing it gives:</p>
+
+<figure class="highlight"><pre><code class="language-shell" data-lang="shell">$ chibi-scheme print-person.scm
+Value of label: #f
+John Doe is 123 years old.
+Value of label after calling print-person: #&lt;procedure #f&gt;
+John Doe is 500 years old.
+Done!</code></pre></figure>
+
+<p>Now I&#39;ll suggest a few mental models that can be used to understand how
+continuations work. After that, we&#39;ll revisit this example, but wrap everything
+up in a neat little library, so that we can write</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (goto))
+</code></pre></figure>
+<p>in our Scheme programs.</p>
+
+<h1>Continuations as call stack manipulations</h1>
+
+<p>Knowing a little bit about implementation strategies for continuations is of
+great help in understanding them.</p>
+
+<p>Many Schemes use <a href="cps">continuation passing style</a>, but I think it&#39;s much
+easier to think of it in terms of copying and reinstating the call stack.</p>
+
+<p>Recall that a <a href="callstack">call stack</a> is a collection of stack frames. Each
+frame contains a return address, function arguments and perhaps also a
+placeholder for a return value.</p>
+
+<p>In the program above, imagine that the program is a tree. At the root node, the
+program first has a branch out to the definition of println, whose internal
+definitions branch out from there. Next, it has a branch for the definition for
+<code>make-label</code>, and so on:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">root
+|
++-- import -- ...
+|
++-- define label -- ...
+|
++-- define print-person -- ...
+|
++-- print-person -- ...
+|
++-- goto-with-value -- ...
+
+^
+The top-level
+</code></pre></figure>
+<p>The vertical line going from root and downwards — the trunk, so to speak —
+is what we call the <em>top-level</em> in Scheme.</p>
+
+<p>Now, what <code>call/cc</code> does, in some implementations, is to take a copy of the
+entire call stack from the top-level up to the current position.</p>
+
+<p>So we copy a chunk of the call stack and put it in memory. This is what we mean
+when we say we &quot;take a continuation&quot;.</p>
+
+<p>When we want to invoke a continuation, we want to continue running at the same
+location that the continuation was taken. To do this, we just reinstate the
+call stack: Chop off the current call stack from the top-level up to the
+current position, and replace it with the one we have stored. Finally, we have
+a value to pass on, so we place that in the correct location at the very top of
+the stack where there is a place for the return-value. Then we continue running
+from there.</p>
+
+<p>I&#39;m doing some hand-waving here, of course. There are many other details that
+you&#39;d have to do, but the point is to understand the general strategy.</p>
+
+<h1>Creating a &quot;goto&quot; library using macros</h1>
+
+<p>Recall the goto example given earlier. It used a global variable <code>label</code> to
+hold the continuation. This is a problem if we want to make a general
+goto-library, because it means you can only ever jump to <em>one</em> location.</p>
+
+<p>So we should take an extra argument to <code>set-label</code> and <code>goto-label</code>. But Scheme
+passes arguments by value and cannot — in general — mutate their &quot;outer&quot;
+values: A function taking an argument can only modify it locally.</p>
+
+<p>There are two ways to solve this: With or without macros.</p>
+
+<p>Without macros, we could use label <em>names</em> instead of <em>variable</em>, but that
+requires a bit of house-keeping code. Let&#39;s use macros instead. We&#39;re going to
+need them for more advanced examples anyway.</p>
+
+<p>A <em>macro</em> will expand its body and embed it at the location in the code where
+it&#39;s used. Think of it as a copy-and-paste operation that substitutes
+variables. The general form is:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-syntax &lt;name&gt;
+  (syntax-rules ()
+    ((&lt;usage pattern 1&gt; &lt;expands to this&gt;)
+     (&lt;usage pattern 2&gt; &lt;expands to this&gt;
+     ... and so on))))
+</code></pre></figure>
+<p>The <code>syntax-rules</code> tells which macro system to use. Yes, there are several
+available. The one we use is pattern-based. The next empty <code>()</code> is a list of
+literals we <em>don&#39;t</em> want to substitute. In our case it&#39;s empty.</p>
+
+<p>As a simple example, consider the <code>unless</code> function, which will execute some
+code if its first boolean value is false:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define (unless test value)
+  (if (not test) value))
+</code></pre></figure>
+<p>Or in pseudo-code:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">function unless(test, value) {
+  if ( !test )
+    return value;
+  else
+    return null;
+}
+</code></pre></figure>
+<p>The above definitions have a serious problem. Because they take <em>values</em>, which
+means that they will always be evaluated. Imagine a <code>wipe-root</code> function that
+deletes everything on your drive and returns the number of important files you
+lost. What would happen below?</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(unless #t (wipe-root))
+</code></pre></figure>
+<p>Well, it will actually execute <code>(wipe-root)</code> <em>before</em> passing on its return
+value to <code>unless</code>. To work around that, we could wrap <code>wipe-root</code> in a closure:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(unless #t (lambda () (wipe-root)))
+</code></pre></figure>
+<p>or, equivalently</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">unless(false, function() {
+  wipe_root();
+});
+</code></pre></figure>
+<p>But that doesn&#39;t look anything like the ordinary if-statement. Another solution
+would be to take a function by value, <code>(unless #f wipe-root)</code>, but that
+wouldn&#39;t be very useful.</p>
+
+<p>Nay, the elegant solution is to use macros to <em>control evaluation</em>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (scheme write))
+
+(define-syntax unless
+  (syntax-rules ()
+    ((unless test code)
+      (if (not test) code))))
+
+(define (wipe-root)
+  (display &quot;Wiping root ...&quot;))
+
+(unless #t (wipe-root))
+</code></pre></figure>
+<p>Running the above code in <a href="chibi">Chibi</a> will not call <code>wipe-root</code>, and
+therefore not print anything.</p>
+
+<p>Note that some people dislike macros, because it can obscure the exact
+behaviour of your program. For example, things that look like functions may
+actually be macros, meaning you don&#39;t really know when — or if — your
+arguments are evaluated, and that makes it hard to reason about your program.
+I think they&#39;re great if used with care.</p>
+
+<p>What we want is to be able to write</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (scheme write)
+        (goto))
+
+(let ((label #f))
+  (make-label label)
+  (write &quot;Nyan &quot;)
+  (goto label))
+</code></pre></figure>
+<p>and with value-passing:</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
+        (scheme write)
+        (print)
+        (goto))
+
+(define *age* #f)
+(define *name* #f)
+
+(define (print-person name age)
+  (println (set-label *name* name) &quot; is &quot;
+           (set-label *age* age) &quot; years old.&quot;))
+
+(print-person &quot;John Doe&quot; &quot;123&quot;)
+(goto-label *name* &quot;Jane Doe&quot;)
+(goto-label *age* &quot;500&quot;)</code></pre></figure>
+
+<p>We&#39;ll use the same strategy as before, except that <code>set-label</code> and <code>goto-label</code>
+can be invoked using a label and value, or only a label.</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(define-library (goto)
+  (import (scheme base)
+          (scheme write)
+          (scheme case-lambda))
+  (export set-label
+          goto-label)
+  (begin
+    (define goto-label
+      (case-lambda
+        ((label) (label &#39;()))
+        ((label value) (label value))))
+
+    (define-syntax set-label
+      (syntax-rules ()
+        ((_ label value)
+           (call/cc (lambda (k)
+                      (if (not label) (set! label k))
+                      value)))
+        ((_ label)
+           (set-label label &#39;()))))))</code></pre></figure>
+
+<p>The <code>goto-label</code> function uses <code>case-lambda</code>, which patterns matches on its
+invocation form. The first line matches calls to <code>(goto-label &lt;label&gt;)</code>, while
+the second matches <code>(goto-label</code> <code>&lt;label&gt;</code> <code>&lt;value&gt;)</code>.</p>
+
+<p>The <code>set-label</code> macro also matches on the same two patterns. Here we use a
+single underscore instead of typing out the full name of the macro.</p>
+
+<p>Put that in a file called <code>goto.sld</code>, and you should be able to run the above
+examples:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ chibi-scheme goto-example.scm
+John Doe is 123 years old.
+Jane Doe is 123 years old.
+John Doe is 500 years old.</code></pre></figure>
+
+<h1>Delimited and undelimited continuations</h1>
+
+<p>Using the call stack model of explanation explained earlier, it means that
+taking a continuation copies the entire call stack down to the second-to-last
+frame of the top-level. This prevents us from having endless loops whenever we
+reinstate a continuation. It&#39;s a detail, don&#39;t worry.</p>
+
+<p>Dealing with continuations in Scheme is done through the <code>call/cc</code> form. It
+provides <a href="undelimited">undelimited continuations</a>, which — while still
+powerful — are not as general as <a href="delimited">delimited continuations</a>.</p>
+
+<p>Now, the big deal about continuations is that you can use them to implement
+<a href="controlflow">any other control flow construct</a>, from simple gotos to
+exception mechanisms, coroutines, cooperative threads, non-deterministic
+programming and so on.</p>
+
+<p>But it turns out that undelimited continuations cannot do this without storing
+one additional piece of state. That is also somewhat of a detail, but as you&#39;ll
+see in the later examples. we always have to keep tabs on different
+continuations. The more general continuation systems are <em>delimited</em>. They are
+truly functional, and do not require explicitly storing continuations in
+variables. Many Schemes provide these through constructs such as
+<code>shift</code>-<code>reset</code> or <code>prompt-abort</code>. I won&#39;t go into those, but the main idea is
+that instead of copying the call stack, you can put a marker somewhere and only
+copy a <em>part</em> of it. That means that your continuations will be <em>true</em>
+functions.</p>
+
+<p>Anyway, undelimited continuations are unfortunately not part of the official
+R<sup>7</sup>RS specification, so I will focus on <code>call/cc</code> here.</p>
+
+<h1>A simple exception system</h1>
+
+<p>Anyway, let&#39;s dive right into the examples. Let&#39;s say we want to implement a
+simple exception system. We can do that using <code>call/cc</code> and then users can
+have exception handling with a simple import statement of pure Scheme code.</p>
+
+<p>To make our exception library useful, we&#39;ll wrap the functionality in macros.</p>
+
+<p>The basic idea is to have a global <code>throw</code> function that we pass the
+continuation on to.</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
+        (scheme write)
+        (print))
+
+(define throw (lambda () #f))
+
+(define-syntax try
+  (syntax-rules (catch)
+    ((try (catch thunk) body ...)
+     (call/cc
+       (lambda (exit)
+         (set! throw
+           (lambda (error)
+             (println &quot;Exception: &quot; error)
+             (exit)))
+         body ...)))))
+
+(try
+  (catch
+    (lambda (error)
+      (println &quot;Error: &quot; error)))
+
+  (define (divide a b)
+    (println &quot;About to perform &quot; a &quot;/&quot; b)
+    (if (zero? b)
+      (throw &quot;Divide by zero&quot;)
+      (println a &quot;/&quot; b &quot; = &quot; (/ a b))))
+
+  (divide 10 2)
+  (divide 1 3)
+  (divide 3 0))
+
+(println &quot;End of program&quot;)</code></pre></figure>
+
+<p>Running the above program,</p>
+
+<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">$ chibi-scheme try-catch-0.scm
+About to perform 10/2
+10/2 = 5
+About to perform 1/3
+1/3 = 1/3
+About to perform 3/0
+Exception: Divide by zero
+End of program</code></pre></figure>
+
+<h2>A better try-catch library</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (try-catch)
+  (import (scheme base)
+          (print))
+
+  (export
+    try)
+
+  (begin
+    (define-syntax try
+      (syntax-rules (catch)
+        ((try 
+           (exception-handler handler)
+           body ...
+           (catch exception-catcher))
+         (begin
+           (define handler (lambda (error) #f)) ; default: do nothing
+           (call/cc
+             (lambda (exit)
+               (set! handler
+                 (lambda (error)
+                   (exception-catcher error)
+                   (exit)))
+               body ...))))))))
+</code></pre></figure>
+<p>Example usage:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (print)
+        (try-catch))
+
+(println  &quot;--start--&quot;)
+
+(try
+  (exception-handler oops)
+
+  (define (divide a b)
+    (if (zero? b)
+      (oops &quot;Division by zero&quot;)
+      (println a &quot;/&quot; b &quot; = &quot; (inexact (/ a b)))))
+
+  (divide 10 2)
+  (divide 1 3)
+  (divide 3 0)
+  (println &quot;This should not execute&quot;)
+
+  (catch
+    (lambda (error)
+      (println &quot;Hey, we caught an error: &quot; error))))
+
+(println &quot;--end--&quot;)
+</code></pre></figure>
+<h2>Restartable exceptions</h2>
+
+<p>When you catch an exception, wouldn&#39;t it be cool to fix the error and then have
+the program continue as if nothing happened? Here&#39;s one way of doing that.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (try-restart)
+  (import (scheme base)
+          (print))
+
+  (export
+    try)
+
+  (begin
+    (define-syntax try
+      (syntax-rules (catch)
+        ((try 
+           (exception-handler handler)
+           (restart-handler the-restart)
+           body ...
+           (catch exception-catcher))
+         (begin
+           (define handler (lambda (error) #f)) ; default: do nothing
+           (define the-restart #f); default
+           (call/cc
+             (lambda (exit) ; exit try-scope
+
+               (set! handler
+                 (lambda (error)
+                   (call/cc
+                     (lambda (current-restart)
+                       (set! the-restart current-restart)
+                       (exception-catcher error)
+                       (exit))))) ; handler
+
+               (begin body ...)))))))))
+</code></pre></figure>
+<p>Example usage:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (print)
+        (try-restart))
+
+(println  &quot;--start--&quot;)
+
+(try
+  (exception-handler oops)
+  (restart-handler phew)
+
+  (define (divide a b)
+    (let
+      ((b (if (not (zero? b))
+            b
+            (oops
+              (string-append
+                &quot;Division by zero: &quot;
+                (number-&gt;string a) &quot;/&quot;
+                (number-&gt;string b))))))
+      (println a &quot;/&quot; b &quot; = &quot; (inexact (/ a b)))))
+
+  (divide 10 2)
+  (divide 3 0)
+  (println &quot;Whoa, we recovered from an error!&quot;)
+  (println &quot;Restartable exceptions are neat!&quot;)
+
+  (catch
+    (lambda (error)
+      (begin
+        (println &quot;Hey, we caught an error: &quot; error)
+        (println &quot;Restart division with 1 as numerator:&quot;)
+        (phew 1)))))
+
+(println &quot;--end--&quot;)
+</code></pre></figure>
+<h1>Lazy evaluation</h1>
+
+<p>Any language with closures can implement lazy evaluation, but if you have a
+macro system, you can change the user interface so that it feels like a natural
+part of the language.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (lazy-evaluation)
+  (import (scheme base))
+
+  (export
+    delay-computation
+    force-computation)
+
+  (begin
+    (define-syntax delay-computation
+      (syntax-rules ()
+        ((_ thunk)
+         (list &#39;delayed (lambda () thunk)))))
+
+    (define (force-computation delayed)
+      (if (and (list? delayed)
+               (eq? (car delayed) &#39;delayed))
+        ((cadr delayed))
+        (error &quot;Not a delayed computation&quot;)))))
+</code></pre></figure>
+<h2>Usage example</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (scheme eval)
+        (print)
+        (lazy-evaluation))
+
+(define (format-harddrive)
+  (println &quot;Formatting harddrive, oops!&quot;))
+
+(define (calc expr)
+  (println &quot;The result of &quot; expr &quot; is &quot; (eval expr)))
+
+(define delayed
+  (list
+    (delay-computation (format-harddrive))
+    (delay-computation (calc &#39;(* 12 12)))
+    (delay-computation (calc &#39;(+ 12 12)))))
+
+(force-computation (list-ref delayed 2))
+(force-computation (list-ref delayed 1))
+</code></pre></figure>
+<h1>Implementing a commenting system</h1>
+
+<p>I forgot to say this, but macro expansions happens at <em>compile time</em>. That&#39;s
+very important to remember. That means we should be able to provide our own
+comment system to Scheme. Our system will allow for nested comments as well, as
+in you can comment some code, but add an <em>uncomment</em> directive outside of
+<em>that</em> to make it run again.</p>
+
+<p>Pseudo-code:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">// This section will disappear during compilation
+comment(
+  function foo() {
+    print(&quot;foo()&quot;);
+  }
+);
+</code></pre></figure>
+<p>If we later on want to enable that part of the code, we can do</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">// This part of the code will now work again
+uncomment(
+  comment(
+    function foo() {
+      print(&quot;foo()&quot;);
+      (comment But, the part here will *still* be a comment, because we
+               only uncommented the outer part.);
+    }
+  ));
+</code></pre></figure>
+<p>The comments library:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (comments)
+  (import (scheme base))
+  (export
+    comment
+    uncomment)
+  (begin
+    (define-syntax comment
+      (syntax-rules ()
+        ((comment body ...)
+         (begin))))
+
+    ;; Works because macros are expanded from the outside and in, unlike
+    ;; evaluation, which is a depth-first traversal.
+    ;;
+    ;; Notice we explicitly match (uncomment (comment body ...))
+    ;;                                        ^^^^^^^
+    (define-syntax uncomment
+      (syntax-rules ()
+        ((uncomment (comment body ...))
+         (begin body ...))))))
+</code></pre></figure>
+<h2>Commenting usage example</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (print)
+        (comments))
+
+(comment
+  (define (hello)
+    (println &quot;The example did NOT work!&quot;)))
+
+(define (hello)
+  (println &quot;The example worked fine!&quot;))
+
+(hello)
+</code></pre></figure>
+<h2>Another commenting example</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (print)
+        (comments))
+
+;; Notice that macros are expanded from the OUTSIDE IN,
+;; unlike evaluation which is a depth-first traversal.
+;;
+;; That is why this works:
+(uncomment
+  (comment
+    (define (hello)
+      (println &quot;The example worked fine!&quot;))))
+
+(comment
+  (define (hello)
+    (println &quot;The example did NOT work!&quot;)))
+
+(hello)
+</code></pre></figure>
+<h1>Transforming code into strings</h1>
+
+<p>Imagine you have a unit-testing framework where you test some code. If it
+fails, you want to print the expected result, the actual result but also the
+source code that gave you the error.</p>
+
+<p>This can be done in languages like C using their <code>#define</code>-macros, but it is a
+bit limited and will not always let you define local variables and so on.</p>
+
+<p>Here&#39;s a simple library that does that in Scheme.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (quote-code)
+  (import (scheme base)
+          (scheme write))
+  (export
+    run
+    code+result
+    quote-code)
+  (begin
+
+    ;; Print &quot;&lt;code&gt; ==&gt; &lt;result&gt;&quot;
+    ;;
+    (define-syntax run
+      (syntax-rules ()
+        ((_ body ...)
+         (begin
+           (display (code+result body ...))
+           (newline)))))
+
+
+    ;; Returns quoted code and its result
+    ;;
+    (define-syntax quote-code
+      (syntax-rules ()
+        ((_ body ...)
+         (let
+           ((code (quote body ...))
+            (result (begin body ...)))
+           (values code result)))))
+
+    ;; Return string in form &quot;code ==&gt; result&quot;.
+    ;;
+    (define-syntax code+result
+      (syntax-rules ()
+        ((_ body ...)
+         (call-with-values
+           (lambda () (quote-code body ...))
+           (lambda (code result)
+             (call-with-port (open-output-string)
+               (lambda (s)
+                 (display code s)
+                 (display &quot; ==&gt; &quot; s)
+                 (display result s)
+                 (get-output-string s))))))))))
+</code></pre></figure>
+<h1>A generator library (coroutines)</h1>
+
+<p>(I <em>think</em> I wrote this. I&#39;ll find out and give credit where due.)</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (generator)
+  (import (scheme base))
+  (export generator-lambda)
+  (begin
+    ;; NOTE: does not accept any parameters, yet...
+    (define-syntax generator-lambda
+      (syntax-rules ()
+        ((generator-lambda yielder body ...)
+          (letrec
+            ((next
+               (lambda (return)
+                 (let-syntax
+                   ((yielder (syntax-rules ()
+                               ((_ value)
+                                (set! return
+                                  (call/cc (lambda (here)
+                                             (return (cons here value)))))))))
+                   (return (begin body ...))))))
+
+             ;; trampoline
+             (lambda ()
+               (let
+                 ((v (call/cc (lambda (cc) (next cc)))))
+                 (if (pair? v)
+                   (begin
+                     (set! next (car v))
+                     (cdr v)) v)))))))))
+</code></pre></figure>
+<h2>Generator usage example</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (scheme write)
+        (generator))
+
+(define (println . s)
+  (for-each display s)
+  (newline))
+
+(define num
+  (generator-lambda yield
+    (yield 10)
+    (yield 20)
+    (yield 30)
+    -1))
+
+(println &quot;1: &quot; (num) &quot; (should be 10)&quot;)
+(println &quot;2: &quot; (num) &quot; (should be 20)&quot;)
+(println &quot;3: &quot; (num) &quot; (should be 30)&quot;)
+(println &quot;4: &quot; (num) &quot; (should be -1)&quot;)
+(println &quot;5: &quot; (num) &quot; (should be -1)&quot;)
+</code></pre></figure>
+<h1>Memoization</h1>
+
+<p>Probably the most boring thing to do, since you&#39;ve probably done it yourself,
+but here it is anyway.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (memoization)
+  (import (scheme base)
+          (scheme write)
+          (srfi 69))
+  (export
+    define-memoize
+    lambda-memoize)
+  (begin
+    (define-syntax lambda-memoize
+      (syntax-rules ()
+        ((_ (arg ...) body ...)
+         (let
+           ((table (make-hash-table equal?)))
+           (lambda (arg ...)
+             (let ((key (list arg ...)))
+               (if (hash-table-exists? table key)
+                 (hash-table-ref table key)
+                 (let
+                   ((value (begin body ...)))
+                   (hash-table-set! table key value)
+                    value))))))))
+
+    (define-syntax define-memoize
+      (syntax-rules ()
+        ((_ (name arg ...) body ...)
+         (define name
+           (lambda-memoize (arg ...)
+              (begin body ...))))))))
+</code></pre></figure>
+<p>We also need the measure-time library:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(define-library (measure-time)
+  (import (scheme base)
+          (scheme time)
+          (print))
+  (export
+    measure-time
+    report-time)
+  (begin
+    (define-syntax measure-time
+      (syntax-rules ()
+        ((_ body ...)
+         (let*
+           ((start (current-second))
+            (value (begin body ...))
+            (time-taken (- (current-second) start)))
+           (values time-taken value)))))
+
+    (define-syntax report-time
+      (syntax-rules ()
+        ((_ body ...)
+         (let
+           ((code (quote body ...)))
+           (call-with-values
+             (lambda () (measure-time body ...))
+             (lambda (time value)
+               (println code &quot; ==&gt; &quot; value &quot; (&quot; time &quot; secs)&quot;)
+               value))))))))
+</code></pre></figure>
+<h2>Usage</h2>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(import (scheme base)
+        (measure-time)
+        (print)
+        (quote-code)
+        (memoization))
+
+(define mul
+  (lambda-memoize (a b)
+    (println &quot;&lt;calculating &quot; a &quot;*&quot; b &quot;&gt;&quot;)
+    (* a b)))
+
+(define (fibo-slow n)
+  (if (&lt;= n 1) n
+      (+ (fibo-slow (- n 1))
+         (fibo-slow (- n 2)))))
+
+(define-memoize (fibo-fast n)
+  (if (&lt;= n 1) n
+      (+ (fibo-fast (- n 1))
+         (fibo-fast (- n 2)))))
+
+(println &quot;Prove that memoization works ...&quot;)
+
+(run (mul 12 12))
+(run (mul 12 12))
+(run (mul 12 12))
+(newline)
+
+(run (mul 21 21))
+(run (mul 12 12))
+(run (mul 21 21))
+(newline)
+
+(println &quot;Measuring times for fibo-slow and fibo-fast ...&quot;)
+
+(report-time (fibo-slow 35))
+(report-time (fibo-fast 35))
+(report-time (fibo-fast 100))
+</code></pre></figure>
+<h1>Other things</h1>
+
+<ul>
+<li>Object orientation as a library: Bryan&#39;s Object System (actually the guy who
+wrote &quot;Real World Haskell&quot;, I think)</li>
+<li><a href="http://c2.com/cgi/wiki?AmbSpecialForm">Non-deterministic programming</a></li>
+<li><a href="http://matt.might.net/articles/programming-with-continuations--exceptions-backtracking-search-threads-generators-coroutines/">Prorgramming with continuations</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Continuation">Green threads</a></li>
+</ul>
+
+<h1>What (R<sup>7</sup>RS) Scheme <em>doesn&#39;t</em> have</h1>
+
+<p>It doesn&#39;t have anaphoric macros, but most systems give you defmacro anyway.
+It&#39;s just not standardized. However, the macro system in RnRS Scheme is
+hygienic, which is a good thing.</p>
+
+<p>It doesn&#39;t have delimited continuations, but again, most Schemes actually
+provide them, it&#39;s just that there isn&#39;t a standardized interface.</p>
+
+<p>What about Common Lisp? It probably has <em>all</em> of the above, either in the
+language itself or in libraries.  Also, Common Lisp compilers are supposedly
+<em>really</em> good at delivering optimized binaries.</p>
+
+<h1>Why would you care?</h1>
+
+<p>Remember I used pseudo-JavaScript in the very first example? Well, there has
+been talk about adding continuations to JavaScript.  So it&#39;s better to learn
+about it now than later.</p>
+
+<p>What other cool stuff can you implement with continuations? Take a look at what
+the Scala people are using them for. One cool usage that was made in Scheme was
+a web server that could <em>serialize</em> continuations and send them across
+processes. If I recall correctly, they used continuations to plug the stateless
+hole you have when doing the server-client-server round dance, so that you
+could program as if the user was there all the time, as in:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">name = ask_user(&quot;What is your name?&quot;);
+age = ask_user(&quot;What is your age?&quot;);
+print_to_user(&quot;Your name is %s and your age is %d&quot;, name, age);
+</code></pre></figure>
+<p>The above program serves a complete HTML page to the user, asking his name.
+If he chooses to answer — and after any amount of time — the program will
+extract his reply, put it in the <code>name</code> variable and continue running as if
+nothing had happened in between. In other words, we plug the statelessness hole
+of HTTP using continuations, and can write programs that look like any other,
+even though they go through an endless server-client round dance.</p>
+
+    </div>
+  </div>
+
+  
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+        var disqus_shortname = 'christianstigenlarsen'; // must be global
+        var disqus_loaded = false;
+
+        function load_disqus()
+        {
+          if (disqus_loaded)
+            return;
+          else
+            disqus_loaded = true;
+
+          var dsq = document.createElement('script');
+          dsq.type = 'text/javascript';
+          dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        }
+
+        window.onscroll = function(e) {
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight)
+            load_disqus();
+        }
+      </script>
+    </div>
+  </div>
+  
+
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <footer>
+        <p>
+        &copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+  </body>
+</html>

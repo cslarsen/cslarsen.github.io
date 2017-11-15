@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Making a simple virtual machine interpreter in Python</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="author" content="Christian Stigen Larsen" />
+    <meta name="description" content="" />
+
+    
+    <link rel="prefetch" href="/">
+
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS"
+          href="/feed.xml" />
+
+    <style type="text/css">
+    /*! normalize.css v3.0.2 | MIT License | git.io/normalize */html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary{display:block}audio,canvas,progress,video{display:inline-block;vertical-align:baseline}audio:not([controls]){display:none;height:0}[hidden],template{display:none}a{background-color:transparent}a:active,a:hover{outline:0}abbr[title]{border-bottom:1px dotted}b,strong{font-weight:bold}dfn{font-style:italic}h1{font-size:2em;margin:.67em 0}mark{background:#ff0;color:#000}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sup{top:-0.5em}sub{bottom:-0.25em}img{border:0}svg:not(:root){overflow:hidden}figure{margin:1em 40px}hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}pre{overflow:auto}code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}button{overflow:visible}button,select{text-transform:none}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}button[disabled],html input[disabled]{cursor:default}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{height:auto}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}legend{border:0;padding:0}textarea{overflow:auto}optgroup{font-weight:bold}table{border-collapse:collapse;border-spacing:0}td,th{padding:0}.container{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 20px;box-sizing:border-box}.column,.columns{width:100%;float:left;box-sizing:border-box}@media(min-width:400px){.container{width:85%;padding:0}}@media(min-width:550px){.container{width:80%}.column,.columns{margin-left:4%}.column:first-child,.columns:first-child{margin-left:0}.one.column,.one.columns{width:4.66666666667%}.two.columns{width:13.3333333333%}.three.columns{width:22%}.four.columns{width:30.6666666667%}.five.columns{width:39.3333333333%}.six.columns{width:48%}.seven.columns{width:56.6666666667%}.eight.columns{width:65.3333333333%}.nine.columns{width:74%}.ten.columns{width:82.6666666667%}.eleven.columns{width:91.3333333333%}.twelve.columns{width:100%;margin-left:0}.one-third.column{width:30.6666666667%}.two-thirds.column{width:65.3333333333%}.one-half.column{width:48%}.offset-by-one.column,.offset-by-one.columns{margin-left:8.66666666667%}.offset-by-two.column,.offset-by-two.columns{margin-left:17.3333333333%}.offset-by-three.column,.offset-by-three.columns{margin-left:26%}.offset-by-four.column,.offset-by-four.columns{margin-left:34.6666666667%}.offset-by-five.column,.offset-by-five.columns{margin-left:43.3333333333%}.offset-by-six.column,.offset-by-six.columns{margin-left:52%}.offset-by-seven.column,.offset-by-seven.columns{margin-left:60.6666666667%}.offset-by-eight.column,.offset-by-eight.columns{margin-left:69.3333333333%}.offset-by-nine.column,.offset-by-nine.columns{margin-left:78.0}.offset-by-ten.column,.offset-by-ten.columns{margin-left:86.6666666667%}.offset-by-eleven.column,.offset-by-eleven.columns{margin-left:95.3333333333%}.offset-by-one-third.column,.offset-by-one-third.columns{margin-left:34.6666666667%}.offset-by-two-thirds.column,.offset-by-two-thirds.columns{margin-left:69.3333333333%}.offset-by-one-half.column,.offset-by-one-half.columns{margin-left:52%}}html{font-size:62.5%}body{font-size:1.5em;line-height:1.6;font-weight:400;font-family:"Raleway","HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif;color:#222}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:2rem;font-weight:300}h1{font-size:4.0rem;line-height:1.2;letter-spacing:-.1rem}h2{font-size:3.6rem;line-height:1.25;letter-spacing:-.1rem}h3{font-size:3.0rem;line-height:1.3;letter-spacing:-.1rem}h4{font-size:2.4rem;line-height:1.35;letter-spacing:-.08rem}h5{font-size:1.8rem;line-height:1.5;letter-spacing:-.05rem}h6{font-size:1.5rem;line-height:1.6;letter-spacing:0}@media(min-width:550px){h1{font-size:5.0rem}h2{font-size:4.2rem}h3{font-size:3.6rem}h4{font-size:3.0rem}h5{font-size:2.4rem}h6{font-size:1.5rem}}p{margin-top:0}a{color:#1eaedb}a:hover{color:#0fa0ce}.button,button,input[type="submit"],input[type="reset"],input[type="button"]{display:inline-block;height:38px;padding:0 30px;color:#555;text-align:center;font-size:11px;font-weight:600;line-height:38px;letter-spacing:.1rem;text-transform:uppercase;text-decoration:none;white-space:nowrap;background-color:transparent;border-radius:4px;border:1px solid #bbb;cursor:pointer;box-sizing:border-box}.button:hover,button:hover,input[type="submit"]:hover,input[type="reset"]:hover,input[type="button"]:hover,.button:focus,button:focus,input[type="submit"]:focus,input[type="reset"]:focus,input[type="button"]:focus{color:#333;border-color:#888;outline:0}.button.button-primary,button.button-primary,input[type="submit"].button-primary,input[type="reset"].button-primary,input[type="button"].button-primary{color:#FFF;background-color:#33c3f0;border-color:#33c3f0}.button.button-primary:hover,button.button-primary:hover,input[type="submit"].button-primary:hover,input[type="reset"].button-primary:hover,input[type="button"].button-primary:hover,.button.button-primary:focus,button.button-primary:focus,input[type="submit"].button-primary:focus,input[type="reset"].button-primary:focus,input[type="button"].button-primary:focus{color:#FFF;background-color:#1eaedb;border-color:#1eaedb}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea,select{height:38px;padding:6px 10px;background-color:#fff;border:1px solid #d1d1d1;border-radius:4px;box-shadow:none;box-sizing:border-box}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea{-webkit-appearance:none;-moz-appearance:none;appearance:none}textarea{min-height:65px;padding-top:6px;padding-bottom:6px}input[type="email"]:focus,input[type="number"]:focus,input[type="search"]:focus,input[type="text"]:focus,input[type="tel"]:focus,input[type="url"]:focus,input[type="password"]:focus,textarea:focus,select:focus{border:1px solid #33c3f0;outline:0}label,legend{display:block;margin-bottom:.5rem;font-weight:600}fieldset{padding:0;border-width:0}input[type="checkbox"],input[type="radio"]{display:inline}label>.label-body{display:inline-block;margin-left:.5rem;font-weight:normal}ul{list-style:circle inside}ol{list-style:decimal inside}ol,ul{padding-left:0;margin-top:0}ul ul,ul ol,ol ol,ol ul{margin:1.5rem 0 1.5rem 3rem;font-size:90%}li{margin-bottom:1rem}code{padding:.2rem .5rem;margin:0 .2rem;font-size:80%;white-space:nowrap}pre>code{display:block;padding:1rem 1.5rem;white-space:pre}@media(max-width:640px){code{margin:0;padding:0}pre>code{padding:0;margin:0}}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #e1e1e1}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}button,.button{margin-bottom:1rem}input,textarea,select,fieldset{margin-bottom:1.5rem}pre,blockquote,dl,figure,table,p,ul,ol,form{margin-bottom:2.5rem}.u-full-width{width:100%;box-sizing:border-box}.u-max-full-width{max-width:100%;box-sizing:border-box}.u-pull-right{float:right}.u-pull-left{float:left}hr{margin-top:3rem;margin-bottom:3.5rem;border-width:0;border-top:1px solid #e1e1e1}.container:after,.row:after,.u-cf{content:"";display:table;clear:both}body{font-family:"Crimson Text",serif;font-size:2.1rem;text-align:justify;text-justify:inter-word;color:black}footer{font-size:small;font-family:"Helvetica",sans-serif}h1{text-align:left;font-weight:bold}h2{text-align:left;font-weight:bold}.plaintable{border:0;vertical-align:top;padding:6px 12px}.plaintable a{background-color:transparent}.sans-serif{font-family:"Helvetica",sans-serif}ul li{list-style-type:disc}.author{font-size:1.7rem;padding:0rem}a{text-decoration:none;background-color:#eafffa;color:black}mark{background-color:#ffe8f8}h1 a:hover{color:black}a:hover{color:black}code{border:0;color:black}p code{color:#233a31}@media(max-width:800px){figure{padding:0;margin:0}body{text-align:left}.hidesmall{display:none}}@media(min-width:900px){figure{padding:0;margin:1em}ul,ol{padding-left:2em}.hidesmall{display:block}}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:400;src:local('Crimson Text'),local('CrimsonText-Roman'),url(https://fonts.gstatic.com/s/crimsontext/v6/3IFMwfRa07i-auYR-B-zNYnF5uFdDttMLvmWuJdhhgs.ttf) format('truetype')}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:600;src:local('Crimson Text Semibold'),local('CrimsonText-Semibold'),url(https://fonts.gstatic.com/s/crimsontext/v6/rEy5tGc5HdXy56Xvd4f3I1FZMcfX2SbzQ69I7OWmkGo.ttf) format('truetype')}
+    </style>
+
+    
+
+  </head>
+  <body>
+  <div class="container">
+  <div class="row">
+    <div class="column" style="margin-top: 15%">
+      <h1><a href="/" style="background-color: transparent;">
+        
+          Making a simple virtual machine interpreter in Python
+        
+        
+      </h1>
+      <p class="sans-serif author">
+        <b>By <a href="/" style="background-color:transparent;">Christian Stigen Larsen</a></b>
+        <br/>
+        
+        
+        
+          Posted 28 Jan 2015 &mdash; updated 23 Jan 2016
+        
+      </p>
+    <p class="lead">
+
+I was asked if I could write a simple blog post on how to make a
+<a href="https://en.wikipedia.org/wiki/Stack_machine">(process) virtual
+machine</a> &mdash; specifically, a
+<a href="https://en.wikipedia.org/wiki/Virtual_machine">stack machine</a>.
+Using Python, I'm going to convince you how easy it is!
+
+</p>
+
+<p><strong>Update</strong>: Based on <a href="https://pay.reddit.com/r/Python/comments/35tg6b/making_a_simple_vm_interpreter_in_python/">comments from r/Python</a>, I&#39;ve made some small
+code changes. Thanks to robin-gvx, bs4h and Dagur! The code in this post is now
+available on <a href="https://github.com/cslarsen/python-simple-vm">GitHub</a>.</p>
+
+<p>A stack machine doesn&#39;t have <a href="https://en.wikipedia.org/wiki/Register_machine">registers</a>. Instead, it puts
+values on a stack and operate on that.  Stack machines are extremely simple,
+but very powerful. There&#39;s a reason why Python, Java, PostScript,
+<a href="https://en.wikipedia.org/wiki/Forth_(programming_language)">Forth</a> and many other languages have chosen a stack machine as their
+VM.</p>
+
+<p>Anyway, let&#39;s talk a little bit more about the stacks. We need an instruction
+pointer stack, which we&#39;ll use to store return addresses. This is so that we
+can call a subroutine (a function, for instance) and then jump back from where
+we came. We <em>could</em> have used self-modifying code instead, like Donald Knuth&#39;s
+original <a href="https://en.wikipedia.org/wiki/MIX">MIX</a> did, but then you&#39;d have to manage a stack yourself if you
+wanted recursion to work.  In this post, I won&#39;t really implement subroutine
+calls, but they&#39;re trivial anyway (consider it an exercise).</p>
+
+<p>With the <em>data stack</em> you get a lot of stuff for free.  For instance, consider
+an expression like <code>(2+3)*4</code>.  On a stack machine, the equivalent code for this
+expression would be <code>2 3 + 4 *</code>: Push two and three on the stack, then the next
+instruction is <code>+</code>, so pop off two numbers and push back the sum.  Next, push
+four on the stack, then pop two values and push their product. Easy!</p>
+
+<p>So, let&#39;s start writing a simple class for a stack.  We&#39;ll just inherit from
+<code>collections.deque</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">from collections import deque
+
+class Stack(deque):
+    push = deque.append
+
+    def top(self):
+        return self[-1]
+</code></pre></figure>
+<p>We can now <code>push</code> and <code>pop</code> to this stack and peek at the top value with <code>top</code>.</p>
+
+<p>Next, let&#39;s make a class for the virtual machine itself. As noted, we need two
+stacks and also some memory for the code itself. We&#39;ll rely on Python&#39;s dynamic
+typing so we can put anything in the list. Only problem is that we really don&#39;t
+discern between strings and built-in functions. The correct way would be to
+insert actual Python functions in the list. Perhaps I&#39;ll do that in a future
+update.</p>
+
+<p>We also need an instruction pointer, pointing to the next item to execute in
+the code.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">class Machine:
+    def __init__(self, code):
+        self.data_stack = Stack()
+        self.return_addr_stack = Stack()
+        self.instruction_pointer = 0
+        self.code = code
+        self.dispatch_map = {...} # see below for values
+</code></pre></figure>
+<p>Now we&#39;ll create some convenience functions to reduce some typing:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def pop(self):
+        return self.data_stack.pop()
+
+    def push(self, value):
+        self.data_stack.push(value)
+
+    def top(self):
+        return self.data_stack.top()
+</code></pre></figure>
+<p>We&#39;ll create a <code>dispatch</code> function that takes an &quot;opcode&quot; (we don&#39;t really use
+codes, just dynamic types, but you get my point) and executes it. But first,
+let&#39;s just create the interpreter loop:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def run(self):
+        while self.instruction_pointer &lt; len(self.code):
+            opcode = self.code[self.instruction_pointer]
+            self.instruction_pointer += 1
+            self.dispatch(opcode)
+</code></pre></figure>
+<p>As you can see, it does one thing, and does it pretty well: Fetch the next
+instruction, increment the instruction pointer and then dispatch based on the
+opcode.  The <code>dispatch</code> function is a tad more longer:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def dispatch(self, op):
+        if op in self.dispatch_map:
+            self.dispatch_map[op]()
+        elif isinstance(op, int):
+            # push numbers on the data stack
+            self.push(op)
+        elif isinstance(op, str) and op[0]==op[-1]==&#39;&quot;&#39;:
+            # push quoted strings on the data stack
+            self.push(op[1:-1])
+        else:
+            raise RuntimeError(&quot;Unknown opcode: &#39;%s&#39;&quot; % op)
+</code></pre></figure>
+<p><strong>Update:</strong> The <code>dispatch_map</code> referenced in <code>__init__</code> should contain the
+values below. It used to be constructed in <code>dispatch</code>, but as <a href="https://csl.name/post/vm/#comment-2467436000">EnTerr</a>
+pointed out in the comments below, that is grossly inefficient.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    dispatch_map = {
+        &quot;%&quot;:        self.mod,
+        &quot;*&quot;:        self.mul,
+        &quot;+&quot;:        self.plus,
+        &quot;-&quot;:        self.minus,
+        &quot;/&quot;:        self.div,
+        &quot;==&quot;:       self.eq,
+        &quot;cast_int&quot;: self.cast_int,
+        &quot;cast_str&quot;: self.cast_str,
+        &quot;drop&quot;:     self.drop,
+        &quot;dup&quot;:      self.dup,
+        &quot;if&quot;:       self.if_stmt,
+        &quot;jmp&quot;:      self.jmp,
+        &quot;over&quot;:     self.over,
+        &quot;print&quot;:    self.print_,
+        &quot;println&quot;:  self.println,
+        &quot;read&quot;:     self.read,
+        &quot;stack&quot;:    self.dump_stack,
+        &quot;swap&quot;:     self.swap,
+    }
+</code></pre></figure>
+<p>Basically, <code>dispatch</code> looks up the opcode, and sees if it&#39;s a built-in function
+like <code>*</code> or <code>drop</code> or <code>dup</code>.  By the way, those are <a href="https://en.wikipedia.org/wiki/Forth_(programming_language)">Forth</a> words, a
+brilliant language that you should check out.  In fact, the code you&#39;ll see
+here is basically a simple Forth.</p>
+
+<p>Anyway, it looks up an opcode like <code>*</code>, sees it should call <code>self.mul</code> then
+executes it. It looks like this:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def mul(self):
+        self.push(self.pop() * self.pop())
+</code></pre></figure>
+<p>All the other functions are like this.  If it can&#39;t find the operation in the
+dispatch map, it will first see if it&#39;s a number. Numbers are automatically
+pushed on the data stack.  If it&#39;s a quoted string, it will push that.</p>
+
+<p>So, there you have it! Congrats!</p>
+
+<p>Let&#39;s define a few more operations, then write a program using our newly
+designed virtual machine and <a href="https://en.wikipedia.org/wiki/P-code_machine">p-code language</a>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    # Allow to use &quot;print&quot; as a name for our own method:
+    from __future__ import print_function
+
+    # ...
+
+    def plus(self):
+        self.push(self.pop() + self.pop())
+
+    def minus(self):
+        last = self.pop()
+        self.push(self.pop() - last)
+
+    def mul(self):
+        self.push(self.pop() * self.pop())
+
+    def div(self):
+        last = self.pop()
+        self.push(self.pop() / last)
+
+    def print(self):
+        sys.stdout.write(str(self.pop()))
+        sys.stdout.flush()
+
+    def println(self):
+        sys.stdout.write(&quot;%s\n&quot; % self.pop())
+        sys.stdout.flush()
+</code></pre></figure>
+<p>Let&#39;s write that <code>print((2+3)*4)</code> example using our virtual machine:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Machine([2, 3, &quot;+&quot;, 4, &quot;*&quot;, &quot;println&quot;]).run()
+</code></pre></figure>
+<p>You can even try running it!</p>
+
+<p>Now, let&#39;s introduce a jump operation, a <em>go-to</em> operation:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def jmp(self):
+        addr = self.pop()
+        if isinstance(addr, int) and 0 &lt;= addr &lt; len(self.code):
+            self.instruction_pointer = addr
+        else:
+            raise RuntimeError(&quot;JMP address must be a valid integer.&quot;)
+</code></pre></figure>
+<p>It just changes the instruction pointer.  Now let&#39;s look at branching:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def if_stmt(self):
+        false_clause = self.pop()
+        true_clause = self.pop()
+        test = self.pop()
+        self.push(true_clause if test else false_clause)
+</code></pre></figure>
+<p>This is also very straight-forward. If you wanted to add a conditional jump,
+you&#39;d have to simply do <code>test-value true-value false-value IF JMP</code>.  (As
+branching is performed often, many VMs provide instructions like <code>JNE</code>, &quot;jump
+if not equal&quot;, for convenience).</p>
+
+<p>Here&#39;s a program that asks the user for two numbers, then prints their sum and
+product:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Machine([
+    &#39;&quot;Enter a number: &quot;&#39;, &quot;print&quot;, &quot;read&quot;, &quot;cast_int&quot;,
+    &#39;&quot;Enter another number: &quot;&#39;, &quot;print&quot;, &quot;read&quot;, &quot;cast_int&quot;,
+    &quot;over&quot;, &quot;over&quot;,
+    &#39;&quot;Their sum is: &quot;&#39;, &quot;print&quot;, &quot;+&quot;, &quot;println&quot;,
+    &#39;&quot;Their product is: &quot;&#39;, &quot;print&quot;, &quot;*&quot;, &quot;println&quot;
+]).run()
+</code></pre></figure>
+<p>The <code>over</code>, <code>read</code> and <code>cast_int</code> operations look like this:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    def cast_int(self):
+        self.push(int(self.pop()))
+
+    def over(self):
+        b = self.pop()
+        a = self.pop()
+        self.push(a)
+        self.push(b)
+        self.push(a)
+
+    def read(self):
+        self.push(raw_input())
+</code></pre></figure>
+<p>Here&#39;s a simple program that asks the user for a number, prints if it&#39;s even or
+odd, then loops:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Machine([
+    &#39;&quot;Enter a number: &quot;&#39;, &quot;print&quot;, &quot;read&quot;, &quot;cast_int&quot;,
+    &#39;&quot;The number &quot;&#39;, &quot;print&quot;, &quot;dup&quot;, &quot;print&quot;, &#39;&quot; is &quot;&#39;, &quot;print&quot;,
+    2, &quot;%&quot;, 0, &quot;==&quot;, &#39;&quot;even.&quot;&#39;, &#39;&quot;odd.&quot;&#39;, &quot;if&quot;, &quot;println&quot;,
+    0, &quot;jmp&quot; # loop forever!
+]).run()
+</code></pre></figure>
+<p>Now, some exercises for you: Create <code>call</code> and <code>return</code> commands. The <code>call</code>
+will push its current address on the return stack, then call <code>self.jmp()</code>.
+The <code>return</code> operation should simply pop the return stack and set the
+instruction pointer to this value (jumps back, or <em>returns</em> from a <code>call</code>).
+When you&#39;ve done that, you&#39;ve got subroutines. </p>
+
+<h2>A simple parser for this language</h2>
+
+<p>Let&#39;s create a small language that mimics the code.  We&#39;ll <em>compile</em> to our
+machine code:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">import tokenize
+from StringIO import StringIO
+
+# ...
+
+def parse(text):
+    tokens = tokenize.generate_tokens(StringIO(text).readline)
+    for toknum, tokval, _, _, _ in tokens:
+        if toknum == tokenize.NUMBER:
+            yield int(tokval)
+        elif toknum in [tokenize.OP, tokenize.STRING, tokenize.NAME]:
+            yield tokval
+        elif toknum == tokenize.ENDMARKER:
+            break
+        else:
+            raise RuntimeError(&quot;Unknown token %s: &#39;%s&#39;&quot; %
+                    (tokenize.tok_name[toknum], tokval))
+</code></pre></figure>
+<h2>A simple optimizer: Constant folding</h2>
+
+<p><a href="https://en.wikipedia.org/wiki/Constant_folding">Constant folding</a> is an example of <a href="https://en.wikipedia.org/wiki/Peephole_optimization">peephole
+optimization</a> that looks for obvious pieces of code that
+can be precomputed at compile time.  For instance, mathematical expressions
+involving constants, e.g. <code>2 3 +</code>.  That should be quite simple to implement.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def constant_fold(code):
+    &quot;&quot;&quot;Constant-folds simple mathematical expressions like 2 3 + to 5.&quot;&quot;&quot;
+    while True:
+        # Find two consecutive numbers and an arithmetic operator
+        for i, (a, b, op) in enumerate(zip(code, code[1:], code[2:])):
+            if isinstance(a, int) and isinstance(b, int) \
+                    and op in {&quot;+&quot;, &quot;-&quot;, &quot;*&quot;, &quot;/&quot;}:
+                m = Machine((a, b, op))
+                m.run()
+                code[i:i+3] = [m.top()]
+                print(&quot;Constant-folded %s%s%s to %s&quot; % (a,op,b,m.top()))
+                break
+        else:
+            break
+    return code
+</code></pre></figure>
+<p>The only problem with this approach is that we would have to update jump
+locations, and that is hard to do in many cases (e.g. <code>read cast_int jmp</code>).
+There are many solutions to this, but a simple work-around is to only allow
+jumping to named labels in the <em>language</em>, then resolve their actual locations
+after doing optimizations.</p>
+
+<p>If you implement Forth <em>words</em>, or functions, you can do more optimizations,
+like removing code that is provably never used (also known as <a href="https://en.wikipedia.org/wiki/Dead_code_elimination">dead code
+elimination</a>).</p>
+
+<h2>A REPL</h2>
+
+<p>Now we can make a simple REPL like so:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def repl():
+    print(&#39;Hit CTRL+D or type &quot;exit&quot; to quit.&#39;)
+
+    while True:
+        try:
+            source = raw_input(&quot;&gt; &quot;)
+            code = list(parse(source))
+            code = constant_fold(code)
+            Machine(code).run()
+        except (RuntimeError, IndexError) as e:
+            print(&quot;IndexError: %s&quot; % e)
+        except KeyboardInterrupt:
+            print(&quot;\nKeyboardInterrupt&quot;)
+</code></pre></figure>
+<p>We can thus test some simple programs:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt; 2 3 + 4 * println
+Constant-folded 2+3 to 5
+Constant-folded 5*4 to 20
+20
+&gt; 12 dup * println
+144
+&gt; &quot;Hello, world!&quot; dup println println
+Hello, world!
+Hello, world!
+</code></pre></figure>
+<p>As you can see, the constant-folder seems to work great!  In the first example,
+it optimizes away all the code down to simply <code>20 println</code>.</p>
+
+<h2>Next steps</h2>
+
+<p>When you have added <code>call</code> and <code>return</code>, you can let the user define new
+functions.  In <a href="https://en.wikipedia.org/wiki/Forth_(programming_language)">Forth</a>, functions are called <em>words</em> and they begin with
+a colon, a name and ends with a semicolon.  For example, an integer square word
+would be:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">: square dup * ;
+</code></pre></figure>
+<p>You can actually try this out in a program like <a href="https://www.gnu.org/software/gforth/">Gforth</a>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ gforth
+Gforth 0.7.3, Copyright (C) 1995-2008 Free Software Foundation, Inc.
+Gforth comes with ABSOLUTELY NO WARRANTY; for details type `license&#39;
+Type `bye&#39; to exit
+: square dup * ;  ok
+12 square . 144  ok
+</code></pre></figure>
+<p>You can also add support for this by looking for <code>:</code> in the parser. When you
+find one, you need to record the name to insert the name along with an address
+(e.g., the current position in the code) and insert them into a <a href="https://en.wikipedia.org/wiki/Symbol_table">symbol
+table</a>.  For simplicity, you could probably even do better by
+just inserting the whole code up to the concluding semicolon in a dictionary,
+e.g.:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">symbol_table = {
+  &quot;square&quot;: [&quot;dup&quot;, &quot;*&quot;]
+  # ...
+}
+</code></pre></figure>
+<p>When you&#39;re finished parsing, you can <a href="https://en.wikipedia.org/wiki/Linker_(computing)">link</a> the program: Go through
+the main code and look for calls to user-defined functions in the symbol table.
+Whenever you find one, add that code to the <em>end</em> of the main code, unless it&#39;s
+already there. Then replace the <code>square</code> operation with a <code>&lt;address&gt;</code> <code>call</code>,
+where <code>&lt;address&gt;</code> is the location where the word/function was inserted.</p>
+
+<p>For this to work correctly, you should consider removing the <code>jmp</code> instruction.
+Otherwise, you&#39;ll have to resolve them as well.  It <em>can</em> work, but then you
+have to keep track of their references in the same order that the user wrote
+the program. I.e., if you want to move around subroutines, you have to be a bit
+careful. It&#39;s fully doable, though.  You should probably also add an <code>exit</code>
+function to stop the program (perhaps with an exit-code to the OS?), so that
+the main code execution won&#39;t continue running into the subroutines.</p>
+
+<p>Actually, a good program layout would probably be to put the main code in a
+subroutine itself, called <code>main</code>.  Or whatever, you decide!</p>
+
+<p>As you can see, this is a lot of fun and teaches you a lot about code
+generation, linking, program space layout and so on.</p>
+
+<h2>Even more cool things to do</h2>
+
+<p>You could use a Python bytecode generation library to attempt to translate the
+VM code to native Python bytecode.  Or implement it in Java and do it on the
+JVM; then you&#39;ll get <a href="https://en.wikipedia.org/wiki/Just-in-time_compilation">JITing</a> for free!</p>
+
+<p>Also, it would be cool to try to make a <a href="https://en.wikipedia.org/wiki/Register_machine">register machine</a>.
+You could try to implement a <a href="https://en.wikipedia.org/wiki/Call_stack">call stack</a> with
+<a href="https://en.wikipedia.org/wiki/Call_stack#STACK-FRAME">stack frames</a> and establish a calling convention.</p>
+
+<p>Finally, if you don&#39;t like the Forth-like language defined here, you can create
+your own simple language that compiles down to this VM.  For instance, you
+should be able to convert infix notation like <code>(2+3)*4</code> to <code>2 3 + 4 *</code> and emit
+code for your VM.  You could allow for C-style code blocks a la <code>{ ... }</code> so
+that a statement like <code>if ( test )</code> <code>{ ... }</code> <code>else</code> <code>{ ... }</code> would be
+translated to:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&lt;true/false test&gt;
+&lt;address of true block&gt;
+&lt;address of false block&gt;
+if
+jmp
+
+&lt;true block&gt;
+&lt;address of end of entire if-statement&gt; jmp
+
+&lt;false block&gt;
+&lt;address of end of entire if-statement&gt; jmp
+</code></pre></figure>
+<p>For instance,</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">Address  Code
+-------  ----
+ 0       2 3 &gt;
+ 3       7        # Address of true-block
+ 4       11       # Address of false-block
+ 5       if
+ 6       jmp      # Conditional jump based on test
+
+# True-block
+ 7       &quot;Two is greater than three.&quot;
+ 8       println
+ 9       15       # Continue main program
+10       jmp
+
+# False-block (&quot;else { ... }&quot;)
+11       &quot;Two is less than three.&quot;
+12       println
+13       15       # Continue main program
+14       jmp
+
+# If-statement finished, main program continues here
+15       ...
+</code></pre></figure>
+<p>Oh, you also need to add the comparison operators <code>!= &lt; &lt;= &gt; &gt;=</code> for this to
+work.</p>
+
+<p><a href="https://github.com/cslarsen/stack-machine">I&#39;ve done some of these things in my C++ stack machine</a>, so
+you can get some hints from there.</p>
+
+<p>I&#39;ve also turned the code here into a project called <a href="https://github.com/cslarsen/crianza">Crianza</a>. It has
+more optimizations and an experimental mode to compile down to Python bytecode.</p>
+
+<h2>The complete code</h2>
+
+<p>The complete code is available at <a href="https://github.com/cslarsen/python-simple-vm/blob/master/vm.py">vm.py on github</a>.</p>
+
+    </div>
+  </div>
+
+  
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+        var disqus_shortname = 'christianstigenlarsen'; // must be global
+        var disqus_loaded = false;
+
+        function load_disqus()
+        {
+          if (disqus_loaded)
+            return;
+          else
+            disqus_loaded = true;
+
+          var dsq = document.createElement('script');
+          dsq.type = 'text/javascript';
+          dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        }
+
+        window.onscroll = function(e) {
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight)
+            load_disqus();
+        }
+      </script>
+    </div>
+  </div>
+  
+
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <footer>
+        <p>
+        &copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+  </body>
+</html>
