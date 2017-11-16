@@ -8,6 +8,20 @@
 		
 			
 			<item>
+				<title>JIT compiling a subset of Python to x86-64</title>
+				
+					<description>&lt;p&gt;This post shows how to write a basic JIT compiler for the Python bytecode,
+using nothing but stock Python modules.&lt;/p&gt;
+</description>
+				
+				<pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
+				<link>https://csl.name/post/python-compiler/</link>
+				<guid isPermaLink="true">https://csl.name/post/python-compiler/</guid>
+			</item>
+			
+		
+			
+			<item>
 				<title>Writing a basic x86-64 JIT compiler from scratch in stock Python</title>
 				
 					<description>&lt;p&gt;In this post I&amp;#39;ll show how to write a rudimentary, native x86-64 &lt;a href=&quot;https://en.wikipedia.org/wiki/Just-in-time_compilation&quot;&gt;just-in-time

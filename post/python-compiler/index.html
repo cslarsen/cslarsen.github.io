@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>JIT compiling a subset of Python to x86-64</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="author" content="Christian Stigen Larsen" />
+    <meta name="description" content="" />
+
+    
+    <link rel="prefetch" href="/">
+
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS"
+          href="/feed.xml" />
+
+    <style type="text/css">
+    /*! normalize.css v3.0.2 | MIT License | git.io/normalize */html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{margin:0}article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary{display:block}audio,canvas,progress,video{display:inline-block;vertical-align:baseline}audio:not([controls]){display:none;height:0}[hidden],template{display:none}a{background-color:transparent}a:active,a:hover{outline:0}abbr[title]{border-bottom:1px dotted}b,strong{font-weight:bold}dfn{font-style:italic}h1{font-size:2em;margin:.67em 0}mark{background:#ff0;color:#000}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sup{top:-0.5em}sub{bottom:-0.25em}img{border:0}svg:not(:root){overflow:hidden}figure{margin:1em 40px}hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}pre{overflow:auto}code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}button{overflow:visible}button,select{text-transform:none}button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}button[disabled],html input[disabled]{cursor:default}button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}input{line-height:normal}input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{height:auto}input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}legend{border:0;padding:0}textarea{overflow:auto}optgroup{font-weight:bold}table{border-collapse:collapse;border-spacing:0}td,th{padding:0}.container{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 20px;box-sizing:border-box}.column,.columns{width:100%;float:left;box-sizing:border-box}@media(min-width:400px){.container{width:85%;padding:0}}@media(min-width:550px){.container{width:80%}.column,.columns{margin-left:4%}.column:first-child,.columns:first-child{margin-left:0}.one.column,.one.columns{width:4.66666666667%}.two.columns{width:13.3333333333%}.three.columns{width:22%}.four.columns{width:30.6666666667%}.five.columns{width:39.3333333333%}.six.columns{width:48%}.seven.columns{width:56.6666666667%}.eight.columns{width:65.3333333333%}.nine.columns{width:74%}.ten.columns{width:82.6666666667%}.eleven.columns{width:91.3333333333%}.twelve.columns{width:100%;margin-left:0}.one-third.column{width:30.6666666667%}.two-thirds.column{width:65.3333333333%}.one-half.column{width:48%}.offset-by-one.column,.offset-by-one.columns{margin-left:8.66666666667%}.offset-by-two.column,.offset-by-two.columns{margin-left:17.3333333333%}.offset-by-three.column,.offset-by-three.columns{margin-left:26%}.offset-by-four.column,.offset-by-four.columns{margin-left:34.6666666667%}.offset-by-five.column,.offset-by-five.columns{margin-left:43.3333333333%}.offset-by-six.column,.offset-by-six.columns{margin-left:52%}.offset-by-seven.column,.offset-by-seven.columns{margin-left:60.6666666667%}.offset-by-eight.column,.offset-by-eight.columns{margin-left:69.3333333333%}.offset-by-nine.column,.offset-by-nine.columns{margin-left:78.0}.offset-by-ten.column,.offset-by-ten.columns{margin-left:86.6666666667%}.offset-by-eleven.column,.offset-by-eleven.columns{margin-left:95.3333333333%}.offset-by-one-third.column,.offset-by-one-third.columns{margin-left:34.6666666667%}.offset-by-two-thirds.column,.offset-by-two-thirds.columns{margin-left:69.3333333333%}.offset-by-one-half.column,.offset-by-one-half.columns{margin-left:52%}}html{font-size:62.5%}body{font-size:1.5em;line-height:1.6;font-weight:400;font-family:"Raleway","HelveticaNeue","Helvetica Neue",Helvetica,Arial,sans-serif;color:#222}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:2rem;font-weight:300}h1{font-size:4.0rem;line-height:1.2;letter-spacing:-.1rem}h2{font-size:3.6rem;line-height:1.25;letter-spacing:-.1rem}h3{font-size:3.0rem;line-height:1.3;letter-spacing:-.1rem}h4{font-size:2.4rem;line-height:1.35;letter-spacing:-.08rem}h5{font-size:1.8rem;line-height:1.5;letter-spacing:-.05rem}h6{font-size:1.5rem;line-height:1.6;letter-spacing:0}@media(min-width:550px){h1{font-size:5.0rem}h2{font-size:4.2rem}h3{font-size:3.6rem}h4{font-size:3.0rem}h5{font-size:2.4rem}h6{font-size:1.5rem}}p{margin-top:0}a{color:#1eaedb}a:hover{color:#0fa0ce}.button,button,input[type="submit"],input[type="reset"],input[type="button"]{display:inline-block;height:38px;padding:0 30px;color:#555;text-align:center;font-size:11px;font-weight:600;line-height:38px;letter-spacing:.1rem;text-transform:uppercase;text-decoration:none;white-space:nowrap;background-color:transparent;border-radius:4px;border:1px solid #bbb;cursor:pointer;box-sizing:border-box}.button:hover,button:hover,input[type="submit"]:hover,input[type="reset"]:hover,input[type="button"]:hover,.button:focus,button:focus,input[type="submit"]:focus,input[type="reset"]:focus,input[type="button"]:focus{color:#333;border-color:#888;outline:0}.button.button-primary,button.button-primary,input[type="submit"].button-primary,input[type="reset"].button-primary,input[type="button"].button-primary{color:#FFF;background-color:#33c3f0;border-color:#33c3f0}.button.button-primary:hover,button.button-primary:hover,input[type="submit"].button-primary:hover,input[type="reset"].button-primary:hover,input[type="button"].button-primary:hover,.button.button-primary:focus,button.button-primary:focus,input[type="submit"].button-primary:focus,input[type="reset"].button-primary:focus,input[type="button"].button-primary:focus{color:#FFF;background-color:#1eaedb;border-color:#1eaedb}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea,select{height:38px;padding:6px 10px;background-color:#fff;border:1px solid #d1d1d1;border-radius:4px;box-shadow:none;box-sizing:border-box}input[type="email"],input[type="number"],input[type="search"],input[type="text"],input[type="tel"],input[type="url"],input[type="password"],textarea{-webkit-appearance:none;-moz-appearance:none;appearance:none}textarea{min-height:65px;padding-top:6px;padding-bottom:6px}input[type="email"]:focus,input[type="number"]:focus,input[type="search"]:focus,input[type="text"]:focus,input[type="tel"]:focus,input[type="url"]:focus,input[type="password"]:focus,textarea:focus,select:focus{border:1px solid #33c3f0;outline:0}label,legend{display:block;margin-bottom:.5rem;font-weight:600}fieldset{padding:0;border-width:0}input[type="checkbox"],input[type="radio"]{display:inline}label>.label-body{display:inline-block;margin-left:.5rem;font-weight:normal}ul{list-style:circle inside}ol{list-style:decimal inside}ol,ul{padding-left:0;margin-top:0}ul ul,ul ol,ol ol,ol ul{margin:1.5rem 0 1.5rem 3rem;font-size:90%}li{margin-bottom:1rem}code{padding:.2rem .5rem;margin:0 .2rem;font-size:80%;white-space:nowrap}pre>code{display:block;padding:1rem 1.5rem;white-space:pre}@media(max-width:640px){code{margin:0;padding:0}pre>code{padding:0;margin:0}}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #e1e1e1}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{padding-right:0}button,.button{margin-bottom:1rem}input,textarea,select,fieldset{margin-bottom:1.5rem}pre,blockquote,dl,figure,table,p,ul,ol,form{margin-bottom:2.5rem}.u-full-width{width:100%;box-sizing:border-box}.u-max-full-width{max-width:100%;box-sizing:border-box}.u-pull-right{float:right}.u-pull-left{float:left}hr{margin-top:3rem;margin-bottom:3.5rem;border-width:0;border-top:1px solid #e1e1e1}.container:after,.row:after,.u-cf{content:"";display:table;clear:both}body{font-family:"Crimson Text",serif;font-size:2.1rem;text-align:justify;text-justify:inter-word;color:black}footer{font-size:small;font-family:"Helvetica",sans-serif}h1{text-align:left;font-weight:bold}h2{text-align:left;font-weight:bold}.plaintable{border:0;vertical-align:top;padding:6px 12px}.plaintable a{background-color:transparent}.sans-serif{font-family:"Helvetica",sans-serif}ul li{list-style-type:disc}.author{font-size:1.7rem;padding:0rem}a{text-decoration:none;background-color:#eafffa;color:black}mark{background-color:#ffe8f8}h1 a:hover{color:black}a:hover{color:black}code{border:0;color:black}p code{color:#233a31}@media(max-width:800px){figure{padding:0;margin:0}body{text-align:left}.hidesmall{display:none}}@media(min-width:900px){figure{padding:0;margin:1em}ul,ol{padding-left:2em}.hidesmall{display:block}}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:400;src:local('Crimson Text'),local('CrimsonText-Roman'),url(https://fonts.gstatic.com/s/crimsontext/v6/3IFMwfRa07i-auYR-B-zNYnF5uFdDttMLvmWuJdhhgs.ttf) format('truetype')}@font-face{font-family:'Crimson Text';font-style:normal;font-weight:600;src:local('Crimson Text Semibold'),local('CrimsonText-Semibold'),url(https://fonts.gstatic.com/s/crimsontext/v6/rEy5tGc5HdXy56Xvd4f3I1FZMcfX2SbzQ69I7OWmkGo.ttf) format('truetype')}
+    </style>
+
+    
+
+  </head>
+  <body>
+  <div class="container">
+  <div class="row">
+    <div class="column" style="margin-top: 15%">
+      <h1><a href="/" style="background-color: transparent;">
+        
+          JIT compiling a subset of Python to x86-64
+        
+        
+      </h1>
+      <p class="sans-serif author">
+        <b>By <a href="/" style="background-color:transparent;">Christian Stigen Larsen</a></b>
+        <br/>
+        
+        
+        
+          16 Nov 2017
+        
+      </p>
+    <p>This post shows how to write a basic JIT compiler for the Python bytecode,
+using nothing but stock Python modules.</p>
+
+<p>We will leverage the code written in <a href="/post/python-jit/">a previous post</a> to bind
+native code to a callable Python function. The complete code is available at
+<a href="https://github.com/cslarsen/minijit">github.com/cslarsen/minijit</a>.</p>
+
+<p>At the end of this post, we will be able to compile Python functions:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; def foo(a, b):
+...   return a*a - b*b
+...
+&gt;&gt;&gt; bar = compile_native(foo)
+&gt;&gt;&gt; bar(1, 2)
+-3
+</code></pre></figure>
+<p>The <code>bar</code> function above will execute on bare metal. We will restrict ourselves
+to compiling branchless functions that operate on integer arithmetic.</p>
+
+<p>Our strategy is to translate Python bytecode to an <a href="https://en.wikipedia.org/wiki/Intermediate_representation">intermediate
+representation</a>, which will then be optimized before being emitted as
+x86-64 machine code. So the first part will be to understand how the bytecode
+works.</p>
+
+<h2>Part one: How the Python bytecode works</h2>
+
+<p>You can see the raw bytecode for the <code>foo</code> function at the top in Python 3 by
+typing</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; foo.__code__.co_code
+b&#39;|\x00|\x00\x14\x00|\x01|\x01\x14\x00\x18\x00S\x00&#39;
+</code></pre></figure>
+<p>In Python 2.7, that would be</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; foo.func_code.co_code
+&#39;|\x00\x00|\x00\x00\x14|\x01\x00|\x01\x00\x14\x18S&#39;
+</code></pre></figure>
+<p>Because the two bytecode sequences are near identical, it doesn&#39;t matter which
+one will be used for the explanation. <strong>I&#39;ve picked Python 2.7 for the
+remainder of this post</strong>, but the <a href="https://github.com/cslarsen/minijit">GitHub code</a> supports both
+2.7 and 3+.</p>
+
+<p>Let&#39;s have a look at the disassembly of <code>foo</code>.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; import dis
+&gt;&gt;&gt; dis.dis(foo)
+  2           0 LOAD_FAST                0 (a)
+              3 LOAD_FAST                0 (a)
+              6 BINARY_MULTIPLY
+              7 LOAD_FAST                1 (b)
+             10 LOAD_FAST                1 (b)
+             13 BINARY_MULTIPLY
+             14 BINARY_SUBTRACT
+             15 RETURN_VALUE
+</code></pre></figure>
+<p>The leftmost number <code>2</code> is the Python source code line number. The next column
+contains the bytecode offsets.  We clearly see that the <code>LOAD_FAST</code> instruction
+takes three bytes: One for the opcode (which instruction it is) and two for a
+16-bit argument. That argument is zero, referring to the first function
+argument <code>a</code>. </p>
+
+<p>CPython — like the JVM, CLR, Forth and many others – is implemented as a <a href="https://en.wikipedia.org/wiki/Stack_machine">stack
+machine</a>. All the bytecode instructions operate on a <em>stack</em> of
+objects. For example, <code>LOAD_FAST</code> will <em>push</em> <code>a</code> reference to the variable <code>a</code>
+on the stack, while <code>BINARY_MULTIPLY</code> will pop off two, multiply them together
+and put their product on the stack. For our purposes, we will treat the stack
+as holding <em>values</em>.</p>
+
+<p>A beautiful property of postfix systems is that
+operations can be serialized. For example, to compute an infix expression like</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">2*2 - 3*3
+</code></pre></figure>
+<p>we need to jump back and forth, calculating products before subtracting.
+But in a <em>postfix</em> system, we only need to scan forward.  For example, the
+above expression can be translated to <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation">Reverse Polish Notation (RPN)</a>
+using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">shunting-yard algorithm</a>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">2 2 * 3 3 * -
+</code></pre></figure>
+<p>Moving from left to right, we push 2 on the stack, then another 2. The <code>*</code> pops
+them both off the stack and pushes the their product 4. Push 3 and 3, pop them
+off and push their product 9. The stack will now contain 9 on the top and 4 at
+the bottom. For the final subtraction, we pop them off, perform the subtraction
+and push the result -5 on the stack.</p>
+
+<p>Now, imagine that the expression was actually written in a programming
+language.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">subtract(multiply(2, 2), multiply(3, 3))
+</code></pre></figure>
+<p>The thing is, in postfix form, the order of evaluation becomes explicit:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">push 2, push 2, multiply, push 3, push 3, multiply, subtract
+</code></pre></figure>
+<p>The use of a stack makes it possible to execute instructions linearly, and this
+is essentially how stack machines operate. With that, you will probably
+understand most of the <a href="https://github.com/python/cpython/blob/master/Include/opcode.h">CPython opcodes</a> and its <a href="https://github.com/python/cpython/blob/1896793/Python/ceval.c#L1055">interpreter
+loop</a>.</p>
+
+<h2>Part two: Translating Python bytecode to IR</h2>
+
+<p>We will now translate the bytecode instructions to an <a href="https://en.wikipedia.org/wiki/Intermediate_representation">intermediate
+representation (IR)</a>. That is, in a form suitable for performing
+things like analysis, translation and optimization. Ours will be blissfully
+naive. We will forego things <a href="https://en.wikipedia.org/wiki/Static_single_assignment_form">single-static assignment (SSA)</a> and
+<a href="https://en.wikipedia.org/wiki/Register_allocation">register allocation</a> for the sake of simplicity, we
+will use something that resembles <a href="https://en.wikipedia.org/wiki/Three-address_code">three-address codes (TAC)</a>.</p>
+
+<p>Our IR will consist of pseudo-assembly instructions in a list. For example</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">ir = [(&quot;mov&quot;, &quot;rax&quot;, 101),
+      (&quot;push&quot;, &quot;rax&quot;, None)]
+</code></pre></figure>
+<p>Contrary to TAC, we put operation first, followed by the destination and source
+registers.  We use <code>None</code> to indicate unused registers and arguments.  It would
+be a very good idea to use unique, abstract registers names like <code>reg1</code>, <code>reg2</code>
+and so on, because it facilitates <a href="https://en.wikipedia.org/wiki/Register_allocation">register
+allocation</a>.  Out of scope.</p>
+
+<p>We will reserve registers RAX and RBX for menial work like arithmetic, pushing
+and popping.  RAX must also hold the return value, because that&#39;s the
+convention.  The CPU already has a stack, so we&#39;ll use that as our data stack
+mechanism.</p>
+
+<p>Registers RDI, RSI, RDC and RCX will be reserved for variables and arguments.
+Per <a href="https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf">AMD64 convention</a>, we expect to see function arguments passed
+in those registers, in that order. In real programs, the matter is a bit more
+involved.</p>
+
+<p>Constants in the bytecode can be looked up with <code>co_consts</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; def bar(n): return n*101
+...
+&gt;&gt;&gt; bar.func_code.co_consts
+(None, 101)
+</code></pre></figure>
+<p>We can now build a compiler that translates Python bytecode to our intermediate
+representation. Its general form will be</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">class Compiler(object):
+    &quot;&quot;&quot;Compiles Python bytecode to intermediate representation (IR).&quot;&quot;&quot;
+
+    def __init__(self, bytecode, constants):
+        self.bytecode = bytecode
+        self.constants = constants
+        self.index = 0
+
+    def fetch(self):
+        byte = self.bytecode[self.index]
+        self.index += 1
+        return byte
+
+    def decode(self):
+        opcode = self.fetch()
+        opname = dis.opname[opcode]
+
+        if opname.startswith((&quot;UNARY&quot;, &quot;BINARY&quot;, &quot;INPLACE&quot;, &quot;RETURN&quot;)):
+            argument = None
+        else:
+            argument = self.fetch()
+
+        return opname, argument
+
+    # ...
+</code></pre></figure>
+<p>It takes some bytecode and constants, and keeps a running index of the current
+bytecode position. It is wise to split the translation up into fetch and decode
+steps. The <code>fetch</code> method simply retrieves the next bytecode, while <code>decode</code>
+will fetch the opcode, look up its name and fetch any arguments.</p>
+
+<p>We need to look up which registers holds which variable:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def variable(self, number):
+    # AMD64 argument passing order for our purposes.
+    order = (&quot;rdi&quot;, &quot;rsi&quot;, &quot;rdx&quot;, &quot;rcx&quot;)
+    return order[number]
+</code></pre></figure>
+<p>The main method will look like</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def compile(self):
+    while self.index &lt; len(self.bytecode):
+        op, arg = self.decode()
+
+        if op == &quot;LOAD_FAST&quot;:
+            yield &quot;push&quot;, self.variable(arg), None
+        # ...
+        else:
+            raise NotImplementedError(op)
+</code></pre></figure>
+<p>Here you can already see how we translate <code>LOAD_FAST</code>. We just push the
+corresponding register onto the stack. So, if the function we are compiling has
+one argument, the bytecode will refer to the zeroth variable. Through the
+<code>variable</code> method, we see that this is register RDI. So it will output</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">(&quot;push&quot;, &quot;rdi&quot;, &quot;None&quot;)
+</code></pre></figure>
+<p>The <code>STORE_FAST</code> instruction does the reverse. It pops a value off the stack
+and stores it in the argument register:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    yield &quot;pop&quot;, &quot;rax&quot;, None
+    yield &quot;mov&quot;, self.variable(arg), &quot;rax&quot;
+</code></pre></figure>
+<p>A binary instruction will pop two values off the stack. For example</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">    elif op == &quot;BINARY_MULTIPLY&quot;:
+        yield &quot;pop&quot;, &quot;rax&quot;, None
+        yield &quot;pop&quot;, &quot;rbx&quot;, None
+        yield &quot;imul&quot;, &quot;rax&quot;, &quot;rbx&quot;
+        yield &quot;push&quot;, &quot;rax&quot;, None
+</code></pre></figure>
+<p>That&#39;s just about it. <code>LOAD_CONST</code> will use a special instruction for storing
+immediate values (i.e., constant integers). Here is the entire method:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def compile(self):
+    while self.index &lt; len(self.bytecode):
+        op, arg = self.decode()
+
+        if op == &quot;LOAD_FAST&quot;:
+            yield &quot;push&quot;, self.variable(arg), None
+
+        elif op == &quot;STORE_FAST&quot;:
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;mov&quot;, self.variable(arg), &quot;rax&quot;
+
+        elif op == &quot;LOAD_CONST&quot;:
+            yield &quot;immediate&quot;, &quot;rax&quot;, self.constants[arg]
+            yield &quot;push&quot;, &quot;rax&quot;, None
+
+        elif op == &quot;BINARY_MULTIPLY&quot;:
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;pop&quot;, &quot;rbx&quot;, None
+            yield &quot;imul&quot;, &quot;rax&quot;, &quot;rbx&quot;
+            yield &quot;push&quot;, &quot;rax&quot;, None
+
+        elif op in (&quot;BINARY_ADD&quot;, &quot;INPLACE_ADD&quot;):
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;pop&quot;, &quot;rbx&quot;, None
+            yield &quot;add&quot;, &quot;rax&quot;, &quot;rbx&quot;
+            yield &quot;push&quot;, &quot;rax&quot;, None
+
+        elif op in (&quot;BINARY_SUBTRACT&quot;, &quot;INPLACE_SUBTRACT&quot;):
+            yield &quot;pop&quot;, &quot;rbx&quot;, None
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;sub&quot;, &quot;rax&quot;, &quot;rbx&quot;
+            yield &quot;push&quot;, &quot;rax&quot;, None
+
+        elif op == &quot;UNARY_NEGATIVE&quot;:
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;neg&quot;, &quot;rax&quot;, None
+            yield &quot;push&quot;, &quot;rax&quot;, None
+
+        elif op == &quot;RETURN_VALUE&quot;:
+            yield &quot;pop&quot;, &quot;rax&quot;, None
+            yield &quot;ret&quot;, None, None
+        else:
+            raise NotImplementedError(op)
+</code></pre></figure>
+<p>We can now compile the <code>foo</code> function at the top to our IR.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; def foo(a, b):
+...   return a*a - b*b
+...
+&gt;&gt;&gt; bytecode = map(ord, foo.func_code.co_code)
+&gt;&gt;&gt; constants = foo.func_code.co_consts
+&gt;&gt;&gt; ir = Compiler(bytecode, constants).compile()
+&gt;&gt;&gt; ir = list(ir)
+&gt;&gt;&gt;
+&gt;&gt;&gt; from pprint import pprint
+&gt;&gt;&gt; pprint(ir)
+[(&#39;push&#39;, &#39;rdi&#39;, None),
+ (&#39;push&#39;, &#39;rdi&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;push&#39;, &#39;rsi&#39;, None),
+ (&#39;push&#39;, &#39;rsi&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;sub&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;ret&#39;, None, None)]
+</code></pre></figure>
+<p>Wow, that sure is a lot of stack operations!</p>
+
+<h2>Part three: Writing a simple optimizer</h2>
+
+<p>We&#39;re going to perform <a href="https://en.wikipedia.org/wiki/Peephole_optimization">peephole optimizations</a> on our IR. Such
+optimizations work on only a few instructions at at time, and translate them
+equivalent but <em>better</em> code. We will go for fewer instructions.</p>
+
+<p>In the IR above, we see an obvious improvement. Instructions like</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">push rdi
+pop rax
+</code></pre></figure>
+<p>can surely be translated to</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">mov rax, rdi
+</code></pre></figure>
+<p>Let&#39;s write a function for that. We&#39;ll also eliminate nonsensical instructions
+like <code>mov rax, rax</code>.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def optimize(ir):
+    def fetch(n):
+        if n &lt; len(ir):
+            return ir[n]
+        else:
+            return None, None, None
+
+    index = 0
+    while index &lt; len(ir):
+        op1, a1, b1 = fetch(index)
+        op2, a2, b2 = fetch(index + 1)
+        op3, a3, b3 = fetch(index + 2)
+        op4, a4, b4 = fetch(index + 3)
+
+        # Removed no-op movs
+        if op1 == &quot;mov&quot; and a1 == b1:
+            index += 1
+            continue
+
+        # Short-circuit push x/pop y
+        if op1 == &quot;push&quot; and op2 == &quot;pop&quot;:
+            index += 2
+            yield &quot;mov&quot;, a2, a1
+            continue
+
+        index += 1
+        yield op1, a1, b1
+</code></pre></figure>
+<p>Instead of showing that this actually works, we&#39;ll just throw in a few other
+optimizations. Just note that writing such optimizations are deceptively
+simple. It&#39;s very easy to do something that seem to make sense, only to see
+your program crash.</p>
+
+<p>A construct like</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">mov rsi, rax
+mov rbx, rsi
+</code></pre></figure>
+<p>can surely be translated to</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">mov rbx, rax
+</code></pre></figure>
+<p>so we&#39;ll add that as well:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">if op1 == op2 == &quot;mov&quot; and a1 == b2:
+    index += 2
+    yield &quot;mov&quot;, a2, b1
+    continue
+</code></pre></figure>
+<p>Finally, the short-circuit of pop and push can be extended so that it works
+over one or several unrelated instructions. Take</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">push rax
+mov rsi, rax
+pop rbx
+</code></pre></figure>
+<p>Since RAX isn&#39;t modified in <code>mov rsi, rax</code>, we can just write</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">mov rsi, rax
+mov rbx, rax
+</code></pre></figure>
+<p>We have to be careful that the middle instruction isn&#39;t a push, though.
+So we&#39;ll add</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">if op1 == &quot;push&quot; and op3 == &quot;pop&quot; and op2 not in (&quot;push&quot;, &quot;pop&quot;):
+    if a2 != a3:
+        index += 3
+        yield &quot;mov&quot;, a3, a1
+        yield op2, a2, b2
+        continue
+</code></pre></figure>
+<p>There is nothing wrong with supporting an indefinite amount of middle
+instructions, but we won&#39;t do that here.</p>
+
+<p>With these instructions, let&#39;s try to optimize the above IR. The complete
+optimization function is</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def optimize(ir):
+    def fetch(n):
+        if n &lt; len(ir):
+            return ir[n]
+        else:
+            return None, None, None
+
+    index = 0
+    while index &lt; len(ir):
+        op1, a1, b1 = fetch(index)
+        op2, a2, b2 = fetch(index + 1)
+        op3, a3, b3 = fetch(index + 2)
+
+        if op1 == &quot;mov&quot; and a1 == b1:
+            index += 1
+            continue
+
+        if op1 == op2 == &quot;mov&quot; and a1 == b2:
+            index += 2
+            yield &quot;mov&quot;, a2, b1
+            continue
+
+        if op1 == &quot;push&quot; and op2 == &quot;pop&quot;:
+            index += 2
+            yield &quot;mov&quot;, a2, a1
+            continue
+
+        if op1 == &quot;push&quot; and op3 == &quot;pop&quot; and op2 not in (&quot;push&quot;, &quot;pop&quot;):
+            if a2 != a3:
+                index += 3
+                yield &quot;mov&quot;, a3, a1
+                yield op2, a2, b2
+                continue
+
+        index += 1
+        yield op1, a1, b1
+</code></pre></figure>
+<p>The IR code was</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">[(&#39;push&#39;, &#39;rdi&#39;, None),
+ (&#39;push&#39;, &#39;rdi&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;push&#39;, &#39;rsi&#39;, None),
+ (&#39;push&#39;, &#39;rsi&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;sub&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;ret&#39;, None, None)]
+</code></pre></figure>
+<p>Running that through <code>optimize</code> yields</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; pprint(list(optimize(ir)))
+[(&#39;push&#39;, &#39;rdi&#39;, None),
+ (&#39;mov&#39;, &#39;rax&#39;, &#39;rdi&#39;),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;push&#39;, &#39;rsi&#39;, None),
+ (&#39;mov&#39;, &#39;rax&#39;, &#39;rsi&#39;),
+ (&#39;pop&#39;, &#39;rbx&#39;, None),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;mov&#39;, &#39;rbx&#39;, &#39;rax&#39;),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;sub&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;mov&#39;, &#39;rax&#39;, &#39;rax&#39;),
+ (&#39;ret&#39;, None, None)]
+</code></pre></figure>
+<p>saving us four instructions. But we still got a few spots left. The first three
+instructions should be optimizable. Let&#39;s run two passes on the IR:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; pprint(list(optimize(list(optimize(ir)))))
+[(&#39;mov&#39;, &#39;rbx&#39;, &#39;rdi&#39;),
+ (&#39;mov&#39;, &#39;rax&#39;, &#39;rdi&#39;),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;push&#39;, &#39;rax&#39;, None),
+ (&#39;mov&#39;, &#39;rbx&#39;, &#39;rsi&#39;),
+ (&#39;mov&#39;, &#39;rax&#39;, &#39;rsi&#39;),
+ (&#39;imul&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;mov&#39;, &#39;rbx&#39;, &#39;rax&#39;),
+ (&#39;pop&#39;, &#39;rax&#39;, None),
+ (&#39;sub&#39;, &#39;rax&#39;, &#39;rbx&#39;),
+ (&#39;ret&#39;, None, None)]
+</code></pre></figure>
+<p>We&#39;ve now saved seven instructions. Our optimizer won&#39;t be able to improve this
+code any further. We could add more peephole optimizations, but another good
+technique would be to use a real register allocated so that we use the full
+spectrum of available registers. The IR compiler could then just assign values
+to unique registers like <code>reg1</code>, <code>reg2</code> and so on, then the allocator would
+choose how to populate the available registers properly. This is actually a hot
+topic for research, and especially for JIT compilation because the general
+problem is NP-complete.</p>
+
+<h2>Part four: Translating IR to x86-64 machine code</h2>
+
+<p>So, we have translated Python bytecode to IR and we have done some
+optimizations on it. We are finally ready to assemble it to machine code!</p>
+
+<p>Our approach will be to write an assembler class that emits instructions. If we
+use the same name for the emitter methods as in the IR code, and use the same
+signature for all, then we can just blindly assemble the whole IR in a short
+loop:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">assembler = Assembler(mj.PAGESIZE)
+
+for name, a, b in ir:
+    emit = getattr(assembler, name)
+    emit(a, b)
+</code></pre></figure>
+<p>If the instruction is <code>mov rax, rbx</code>, then <code>emit</code> will point to <code>assembler.mov</code>
+and the call will therefore be <code>assembler.mov(&quot;rax&quot;, &quot;rbx&quot;)</code>.</p>
+
+<p>Let&#39;s write an assembler class. We copy the code for <code>address</code>, <code>little_endian</code>
+and import <code>create_block</code> from the <a href="/post/python-jit/">code in the previous post</a>.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">class Assembler(object):
+    def __init__(self, size):
+        self.block = mj.create_block(size)
+        self.index = 0
+        self.size = size
+
+    @property
+    def address(self):
+        &quot;&quot;&quot;Returns address of block in memory.&quot;&quot;&quot;
+        return ctypes.cast(self.block, ctypes.c_void_p).value
+
+    def little_endian(self, n):
+        &quot;&quot;&quot;Converts 64-bit number to little-endian format.&quot;&quot;&quot;
+        return [(n &amp; (0xff &lt;&lt; i*2)) &gt;&gt; i*8 for i in range(8)]
+
+    def emit(self, *args):
+        &quot;&quot;&quot;Writes machine code to memory block.&quot;&quot;&quot;
+        for code in args:
+            self.block[self.index] = code
+            self.index += 1
+
+    def ret(self, a, b):
+        self.emit(0xc3)
+
+    # ...
+</code></pre></figure>
+<p>So calling <code>assembler.ret(None, None)</code> will set the first machine code byte to
+0xc3. That&#39;s how <code>retq</code> is encoded. To find the encoding of other instructions,
+I mainly used the <a href="http://www.nasm.us">NASM</a> assembler. Putting the following in a file
+<code>sandbox.asm</code>,</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">bits 64
+section .text
+mov rax, rcx
+mov rax, rdx
+mov rax, rbx
+mov rax, rsp
+</code></pre></figure>
+<p>I assembled it with</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ nasm -felf64 sandbox.asm -osandbox.o
+</code></pre></figure>
+<p>(<code>-fmacho64</code> for macOS) and dumped the machine code with</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">$ objdump -d sandbox.o
+
+sandbox.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 &lt;.text&gt;:
+   0:   48 89 c8                mov    %rcx,%rax
+   3:   48 89 d0                mov    %rdx,%rax
+   6:   48 89 d8                mov    %rbx,%rax
+   9:   48 89 e0                mov    %rsp,%rax
+</code></pre></figure>
+<p>It seems like the 64-bit <code>movq</code> (which <em>we</em> just call <code>mov</code>) is encoded with
+the prefix <code>0x48 0x89</code> with the source and destination registers stored in the
+last byte.  Digging into a few manuals, we see that they are encoded using
+three bits each.  We&#39;ll write a method for that.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def registers(self, a, b=None):
+    &quot;&quot;&quot;Encodes one or two registers for machine code instructions.&quot;&quot;&quot;
+    order = (&quot;rax&quot;, &quot;rcx&quot;, &quot;rdx&quot;, &quot;rbx&quot;, &quot;rsp&quot;, &quot;rbp&quot;, &quot;rsi&quot;, &quot;rdi&quot;)
+    enc = order.index(a)
+    if b is not None:
+        enc = enc &lt;&lt; 3 | order.index(b)
+    return enc
+</code></pre></figure>
+<p>For the <code>movq</code> instruction, we can now write</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def mov(self, a, b):
+    self.emit(0x48, 0x89, 0xc0 | self.registers(b, a))
+</code></pre></figure>
+<p>The rest of the instructions are done in a similar manner, except for moving
+immediate (i.e., constant) values into registers.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def ret(self, a, b):
+    self.emit(0xc3)
+
+def push(self, a, _):
+    self.emit(0x50 | self.registers(a))
+
+def pop(self, a, _):
+    self.emit(0x58 | self.registers(a))
+
+def imul(self, a, b):
+    self.emit(0x48, 0x0f, 0xaf, 0xc0 | self.registers(a, b))
+
+def add(self, a, b):
+    self.emit(0x48, 0x01, 0xc0 | self.registers(b, a))
+
+def sub(self, a, b):
+    self.emit(0x48, 0x29, 0xc0 | self.registers(b, a))
+
+def neg(self, a, _):
+    self.emit(0x48, 0xf7, 0xd8 | self.register(a))
+
+def mov(self, a, b):
+    self.emit(0x48, 0x89, 0xc0 | self.registers(b, a))
+
+def immediate(self, a, number):
+    self.emit(0x48, 0xb8 | self.registers(a), *self.little_endian(number))
+</code></pre></figure>
+<p>The only special thing about the last method is that we have to use a different
+prefix and encode the number in little-endian format.</p>
+
+<h2>The final part</h2>
+
+<p>Finally, we can tie everything together. Given the function</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def foo(a, b):
+  return a*a - b*b
+</code></pre></figure>
+<p>we first extract the Python bytecode, using <code>ord</code> to map bytes to integers, and
+any constants</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">bytecode = map(ord, foo.func_code.co_code)
+constants = foo.func_code.co_consts
+</code></pre></figure>
+<p>Compiling to IR</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">ir = Compiler(bytecode, constants).compile()
+ir = list(ir)
+</code></pre></figure>
+<p>Perform a few optimization passes:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">ir = list(optimize(ir))
+ir = list(optimize(ir))
+ir = list(optimize(ir))
+</code></pre></figure>
+<p>Assemble to native code</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">assembler = Assembler(mj.PAGESIZE)
+for name, a, b in ir:
+    emit = getattr(assembler, name)
+    emit(a, b)
+</code></pre></figure>
+<p>Make the memory block executable</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">mj.make_executable(assembler.block, assembler.size)
+</code></pre></figure>
+<p>We use <code>ctypes</code> to set the correct signature and cast the code to a callable
+Python function. We can get the number of arguments with <code>co_argcount</code>, and we
+treat input arguments as signed 64-bit integers.</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">argcount = foo.func_code.co_argcount
+signature = ctypes.CFUNCTYPE(*[ctypes.c_int64] * argcount)
+signature.restype = ctypes.c_int64
+</code></pre></figure>
+<p>Finally,</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">native_foo = signature(assembler.address)
+print(native_foo(2, 3))
+</code></pre></figure>
+<p>It prints -5.</p>
+
+<p>To disassemble the code, we can use the <a href="http://www.capstone-engine.org/lang_python.html">Capstone disassembler</a> right
+within Python. It&#39;s not a built-in module, so you need to install it yourself.
+Or you can break into the Python process with a debugger. Here is the
+disassembly for <code>native_foo</code>:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">0x7f1133351000:       mov     rbx, rdi
+0x7f1133351003:       mov     rax, rdi
+0x7f1133351006:       imul    rax, rbx
+0x7f113335100a:       push    rax
+0x7f113335100b:       mov     rbx, rsi
+0x7f113335100e:       mov     rax, rsi
+0x7f1133351011:       imul    rax, rbx
+0x7f1133351015:       mov     rbx, rax
+0x7f1133351018:       pop     rax
+0x7f1133351019:       sub     rax, rbx
+0x7f113335101c:       ret
+</code></pre></figure>
+<p>You can try out different functions, for example</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def bar(n):
+  return n * 0x101
+</code></pre></figure>
+<p>turns into</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">0x7f07d16a7000:       mov     rbx, rdi
+0x7f07d16a7003:       movabs  rax, 0x101
+0x7f07d16a700d:       imul    rax, rbx
+0x7f07d16a7011:       ret
+</code></pre></figure>
+<p>and</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">def baz(a, b, c):
+  a -= 1
+  return a + 2*b -c
+</code></pre></figure>
+<p>becomes</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">0x7f13fba09000:       push    rdi
+0x7f13fba09001:       movabs  rax, 1
+0x7f13fba0900b:       mov     rbx, rax
+0x7f13fba0900e:       pop     rax
+0x7f13fba0900f:       sub     rax, rbx
+0x7f13fba09012:       mov     rdi, rax
+0x7f13fba09015:       push    rdi
+0x7f13fba09016:       movabs  rax, 2
+0x7f13fba09020:       mov     rbx, rax
+0x7f13fba09023:       mov     rax, rsi
+0x7f13fba09026:       imul    rax, rbx
+0x7f13fba0902a:       pop     rbx
+0x7f13fba0902b:       add     rax, rbx
+0x7f13fba0902e:       mov     rbx, rdx
+0x7f13fba09031:       sub     rax, rbx
+0x7f13fba09034:       ret
+</code></pre></figure>
+<p>You may wonder how fast this runs. The answer is: Slow. The reason is: Because
+there is inherent overhead when calling into native code with <code>ctypes</code>. It
+needs to convert arguments and so on. I also believe (but haven&#39;t
+double-checked) that it saves some registers, because per the convention, we
+should have restored RBX before exiting.</p>
+
+<p>But it would be interesting to compile larger functions with native function
+calls, loops and so on, and compare that with Python. At that point, I believe
+you&#39;ll see the native code going much faster.</p>
+
+<h2>What&#39;s next?</h2>
+
+<p>I believe this is good for learning, so play around a bit. Try to make a
+register allocator, for example. Create more peephole optimizations. Add
+support for calling other functions, loops.</p>
+
+<p>With a decorator, you should be able to swap out class methods on the fly with
+compiled ones. That&#39;s exactly what  <a href="https://numba.pydata.org/">Numba</a> does, but ours is just a
+drop in the ocean compared to that.</p>
+
+<p>While we took the approach of translating Python bytecode, another good
+technique is to use the <code>ast</code> module to traverse the abstract syntax tree. A
+guy <a href="https://github.com/benhoyt/pyast64">did that</a>.</p>
+
+    </div>
+  </div>
+
+  
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+        var disqus_shortname = 'christianstigenlarsen'; // must be global
+        var disqus_loaded = false;
+
+        function load_disqus()
+        {
+          if (disqus_loaded)
+            return;
+          else
+            disqus_loaded = true;
+
+          var dsq = document.createElement('script');
+          dsq.type = 'text/javascript';
+          dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        }
+
+        window.onscroll = function(e) {
+          if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight)
+            load_disqus();
+        }
+      </script>
+    </div>
+  </div>
+  
+
+  <div class="row" style="margin-top: 10rem;">
+    <div class="column">
+      <footer>
+        <p>
+        &copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.
+        </p>
+      </footer>
+    </div>
+  </div>
+</div>
+
+  </body>
+</html>

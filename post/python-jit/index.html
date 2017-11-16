@@ -47,7 +47,8 @@
 compiler (JIT)</a> in CPython, using only the built-in modules.</p>
 
 <p>Update: This post made the <a href="https://news.ycombinator.com/front?day=2017-11-09">front page of HN</a>, and I&#39;ve incorporated
-some of the <a href="https://news.ycombinator.com/item?id=15665581">discussion feedback</a>.</p>
+some of the <a href="https://news.ycombinator.com/item?id=15665581">discussion feedback</a>. I&#39;ve also written a <a href="/post/python-compiler/">follow-up
+post</a> that JITs Python bytecode to x86-64.</p>
 
 <p>The code here specifically targets the UNIX systems macOS and Linux, but should
 be easily translated to other systems such as Windows. The complete code is
@@ -278,8 +279,8 @@ multiplies RAX and RDI and puts the result in RAX. Finally, we pop a 64-bit
 return address off the stack and jump to it with RETQ. At this level, it&#39;s easy
 to imagine how one could implement <a href="https://en.wikipedia.org/wiki/Continuation-passing_style">continuation-passing style</a>.</p>
 
-<p>Note that the the constant <code>0xdeadbeefed</code> is in little-endian format. We need
-to remember to do the same when we patch the code. (By the way, a good mnemonic
+<p>Note that the constant <code>0xdeadbeefed</code> is in little-endian format. We need to
+remember to do the same when we patch the code. (By the way, a good mnemonic
 for remembering the word order is that little endian means &quot;little-end first&quot;).</p>
 
 <p>We are now ready to put everything in a Python function.</p>

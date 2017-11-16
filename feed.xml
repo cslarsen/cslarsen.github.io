@@ -7,6 +7,19 @@
 		<atom:link href="https://csl.name/feed.xml" rel="self" type="application/rss+xml" />
 		
 			<item>
+				<title>JIT compiling a subset of Python to x86-64</title>
+				        
+				
+					<description>&lt;p&gt;This post shows how to write a basic JIT compiler for the Python bytecode,
+using nothing but stock Python modules.&lt;/p&gt;
+</description>
+				
+				<pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
+				<link>https://csl.name/post/python-compiler/</link>
+				<guid isPermaLink="true">https://csl.name/post/python-compiler/</guid>
+			</item>
+		
+			<item>
 				<title>Writing a basic x86-64 JIT compiler from scratch in stock Python</title>
 				        
 				
@@ -147,21 +160,6 @@ show how to index your code and update it automatically when using git.
 				<pubDate>Tue, 23 Feb 2016 19:19:20 +0000</pubDate>
 				<link>https://csl.name/post/gtags/</link>
 				<guid isPermaLink="true">https://csl.name/post/gtags/</guid>
-			</item>
-		
-			<item>
-				<title>Adding a TLS certificate to your NearlyFreeSpeech site</title>
-				        
-				
-					<description>&lt;p&gt;I recently had to renew the TLS certificate on &lt;a href=&quot;https://csl.name&quot;&gt;csl.name&lt;/a&gt;,
-which is hosted on &lt;a href=&quot;https://www.nearlyfreespeech.net&quot;&gt;NearlyFreeSpeech (NFSN)&lt;/a&gt;.
-But I had forgotten how to. So I decided to post a &lt;a href=&quot;https://www.mc-guinness.co.uk/blog/20150710/set-up-https-ssl-tls-encryption-access-to-nearlyfreespeech-hosted-sites/&quot;&gt;condensed version of the
-steps found here&lt;/a&gt; on my own site.&lt;/p&gt;
-</description>
-				
-				<pubDate>Sat, 23 Jan 2016 21:54:29 +0000</pubDate>
-				<link>https://csl.name/post/tls-nfsn/</link>
-				<guid isPermaLink="true">https://csl.name/post/tls-nfsn/</guid>
 			</item>
 		
 	</channel>

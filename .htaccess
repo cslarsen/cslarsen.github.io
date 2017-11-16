@@ -52,5 +52,5 @@ RedirectMatch 301 ^/einsteins_problem.*$ /post/einsteins-puzzle/
 RedirectMatch 301 ^/qt-gcc.*$ /post/qt-gcc/
 
 # Non-existant pages
-ErrorDocument 404 /404/index.html.gz
+ErrorDocument 404 /404/index.html
 

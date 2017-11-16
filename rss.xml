@@ -9,7 +9,795 @@
     <link>https://csl.name</link>
     <description>Personal homepage with posts mainly on programming</description>
     <copyright>&copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.</copyright>
-    <pubDate>Wed, 08 Nov 2017 21:03:00 +0000</pubDate>
+    <pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
+    <item>
+      <title>JIT compiling a subset of Python to x86-64</title>
+      <link>https://csl.name/post/python-compiler/</link>
+      <description><![CDATA[This post shows how to write a basic JIT compiler for the Python bytecode,
+using nothing but stock Python modules.
+]]></description>
+      <pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
+      <guid>https://csl.name/post/python-compiler/</guid>
+      <content:encoded><![CDATA[This post shows how to write a basic JIT compiler for the Python bytecode,
+using nothing but stock Python modules.
+
+We will leverage the code written in [a previous post][previous-post] to bind
+native code to a callable Python function. The complete code is available at
+[github.com/cslarsen/minijit][minijit.github].
+
+At the end of this post, we will be able to compile Python functions:
+
+    >>> def foo(a, b):
+    ...   return a*a - b*b
+    ...
+    >>> bar = compile_native(foo)
+    >>> bar(1, 2)
+    -3
+
+The `bar` function above will execute on bare metal. We will restrict ourselves
+to compiling branchless functions that operate on integer arithmetic.
+
+Our strategy is to translate Python bytecode to an [intermediate
+representation][ir.wiki], which will then be optimized before being emitted as
+x86-64 machine code. So the first part will be to understand how the bytecode
+works.
+
+Part one: How the Python bytecode works
+---------------------------------------
+
+You can see the raw bytecode for the `foo` function at the top in Python 3 by
+typing
+
+    >>> foo.__code__.co_code
+    b'|\x00|\x00\x14\x00|\x01|\x01\x14\x00\x18\x00S\x00'
+
+In Python 2.7, that would be
+
+    >>> foo.func_code.co_code
+    '|\x00\x00|\x00\x00\x14|\x01\x00|\x01\x00\x14\x18S'
+
+Because the two bytecode sequences are near identical, it doesn't matter which
+one will be used for the explanation. **I've picked Python 2.7 for the
+remainder of this post**, but the [GitHub code][minijit.github] supports both
+2.7 and 3+.
+
+Let's have a look at the disassembly of `foo`.
+
+    >>> import dis
+    >>> dis.dis(foo)
+      2           0 LOAD_FAST                0 (a)
+                  3 LOAD_FAST                0 (a)
+                  6 BINARY_MULTIPLY
+                  7 LOAD_FAST                1 (b)
+                 10 LOAD_FAST                1 (b)
+                 13 BINARY_MULTIPLY
+                 14 BINARY_SUBTRACT
+                 15 RETURN_VALUE
+
+The leftmost number `2` is the Python source code line number. The next column
+contains the bytecode offsets.  We clearly see that the `LOAD_FAST` instruction
+takes three bytes: One for the opcode (which instruction it is) and two for a
+16-bit argument. That argument is zero, referring to the first function
+argument `a`. 
+
+CPython — like the JVM, CLR, Forth and many others – is implemented as a [stack
+machine][stack-machine]. All the bytecode instructions operate on a _stack_ of
+objects. For example, `LOAD_FAST` will _push_ `a` reference to the variable `a`
+on the stack, while `BINARY_MULTIPLY` will pop off two, multiply them together
+and put their product on the stack. For our purposes, we will treat the stack
+as holding _values_.
+
+A beautiful property of postfix systems is that
+operations can be serialized. For example, to compute an infix expression like
+
+    2*2 - 3*3
+
+we need to jump back and forth, calculating products before subtracting.
+But in a _postfix_ system, we only need to scan forward.  For example, the
+above expression can be translated to [Reverse Polish Notation (RPN)][rpn.wiki]
+using the [shunting-yard algorithm][shunting-yard.wiki]:
+
+    2 2 * 3 3 * -
+
+Moving from left to right, we push 2 on the stack, then another 2. The `*` pops
+them both off the stack and pushes the their product 4. Push 3 and 3, pop them
+off and push their product 9. The stack will now contain 9 on the top and 4 at
+the bottom. For the final subtraction, we pop them off, perform the subtraction
+and push the result -5 on the stack.
+
+Now, imagine that the expression was actually written in a programming
+language.
+
+    subtract(multiply(2, 2), multiply(3, 3))
+
+The thing is, in postfix form, the order of evaluation becomes explicit:
+
+    push 2, push 2, multiply, push 3, push 3, multiply, subtract
+
+The use of a stack makes it possible to execute instructions linearly, and this
+is essentially how stack machines operate. With that, you will probably
+understand most of the [CPython opcodes][python.opcodes] and its [interpreter
+loop][python.eval].
+
+Part two: Translating Python bytecode to IR
+-------------------------------------------
+
+We will now translate the bytecode instructions to an [intermediate
+representation (IR)][ir.wiki]. That is, in a form suitable for performing
+things like analysis, translation and optimization. Ours will be blissfully
+naive. We will forego things [single-static assignment (SSA)][ssa.wiki] and
+[register allocation][register-allocation.wiki] for the sake of simplicity, we
+will use something that resembles [three-address codes (TAC)][tac.wiki].
+
+Our IR will consist of pseudo-assembly instructions in a list. For example
+
+    ir = [("mov", "rax", 101),
+          ("push", "rax", None)]
+
+Contrary to TAC, we put operation first, followed by the destination and source
+registers.  We use `None` to indicate unused registers and arguments.  It would
+be a very good idea to use unique, abstract registers names like `reg1`, `reg2`
+and so on, because it facilitates [register
+allocation][register-allocation.wiki].  Out of scope.
+
+We will reserve registers RAX and RBX for menial work like arithmetic, pushing
+and popping.  RAX must also hold the return value, because that's the
+convention.  The CPU already has a stack, so we'll use that as our data stack
+mechanism.
+
+Registers RDI, RSI, RDC and RCX will be reserved for variables and arguments.
+Per [AMD64 convention][amd64.abi], we expect to see function arguments passed
+in those registers, in that order. In real programs, the matter is a bit more
+involved.
+
+Constants in the bytecode can be looked up with `co_consts`:
+
+    >>> def bar(n): return n*101
+    ...
+    >>> bar.func_code.co_consts
+    (None, 101)
+
+We can now build a compiler that translates Python bytecode to our intermediate
+representation. Its general form will be
+
+    class Compiler(object):
+        """Compiles Python bytecode to intermediate representation (IR)."""
+
+        def __init__(self, bytecode, constants):
+            self.bytecode = bytecode
+            self.constants = constants
+            self.index = 0
+
+        def fetch(self):
+            byte = self.bytecode[self.index]
+            self.index += 1
+            return byte
+
+        def decode(self):
+            opcode = self.fetch()
+            opname = dis.opname[opcode]
+
+            if opname.startswith(("UNARY", "BINARY", "INPLACE", "RETURN")):
+                argument = None
+            else:
+                argument = self.fetch()
+
+            return opname, argument
+
+        # ...
+
+It takes some bytecode and constants, and keeps a running index of the current
+bytecode position. It is wise to split the translation up into fetch and decode
+steps. The `fetch` method simply retrieves the next bytecode, while `decode`
+will fetch the opcode, look up its name and fetch any arguments.
+
+We need to look up which registers holds which variable:
+
+    def variable(self, number):
+        # AMD64 argument passing order for our purposes.
+        order = ("rdi", "rsi", "rdx", "rcx")
+        return order[number]
+
+The main method will look like
+
+
+    def compile(self):
+        while self.index < len(self.bytecode):
+            op, arg = self.decode()
+
+            if op == "LOAD_FAST":
+                yield "push", self.variable(arg), None
+            # ...
+            else:
+                raise NotImplementedError(op)
+
+Here you can already see how we translate `LOAD_FAST`. We just push the
+corresponding register onto the stack. So, if the function we are compiling has
+one argument, the bytecode will refer to the zeroth variable. Through the
+`variable` method, we see that this is register RDI. So it will output
+
+    ("push", "rdi", "None")
+
+The `STORE_FAST` instruction does the reverse. It pops a value off the stack
+and stores it in the argument register:
+
+        yield "pop", "rax", None
+        yield "mov", self.variable(arg), "rax"
+
+A binary instruction will pop two values off the stack. For example
+
+        elif op == "BINARY_MULTIPLY":
+            yield "pop", "rax", None
+            yield "pop", "rbx", None
+            yield "imul", "rax", "rbx"
+            yield "push", "rax", None
+
+That's just about it. `LOAD_CONST` will use a special instruction for storing
+immediate values (i.e., constant integers). Here is the entire method:
+
+    def compile(self):
+        while self.index < len(self.bytecode):
+            op, arg = self.decode()
+
+            if op == "LOAD_FAST":
+                yield "push", self.variable(arg), None
+
+            elif op == "STORE_FAST":
+                yield "pop", "rax", None
+                yield "mov", self.variable(arg), "rax"
+
+            elif op == "LOAD_CONST":
+                yield "immediate", "rax", self.constants[arg]
+                yield "push", "rax", None
+
+            elif op == "BINARY_MULTIPLY":
+                yield "pop", "rax", None
+                yield "pop", "rbx", None
+                yield "imul", "rax", "rbx"
+                yield "push", "rax", None
+
+            elif op in ("BINARY_ADD", "INPLACE_ADD"):
+                yield "pop", "rax", None
+                yield "pop", "rbx", None
+                yield "add", "rax", "rbx"
+                yield "push", "rax", None
+
+            elif op in ("BINARY_SUBTRACT", "INPLACE_SUBTRACT"):
+                yield "pop", "rbx", None
+                yield "pop", "rax", None
+                yield "sub", "rax", "rbx"
+                yield "push", "rax", None
+
+            elif op == "UNARY_NEGATIVE":
+                yield "pop", "rax", None
+                yield "neg", "rax", None
+                yield "push", "rax", None
+
+            elif op == "RETURN_VALUE":
+                yield "pop", "rax", None
+                yield "ret", None, None
+            else:
+                raise NotImplementedError(op)
+
+We can now compile the `foo` function at the top to our IR.
+
+    >>> def foo(a, b):
+    ...   return a*a - b*b
+    ...
+    >>> bytecode = map(ord, foo.func_code.co_code)
+    >>> constants = foo.func_code.co_consts
+    >>> ir = Compiler(bytecode, constants).compile()
+    >>> ir = list(ir)
+    >>>
+    >>> from pprint import pprint
+    >>> pprint(ir)
+    [('push', 'rdi', None),
+     ('push', 'rdi', None),
+     ('pop', 'rax', None),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('push', 'rsi', None),
+     ('push', 'rsi', None),
+     ('pop', 'rax', None),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('pop', 'rbx', None),
+     ('pop', 'rax', None),
+     ('sub', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('pop', 'rax', None),
+     ('ret', None, None)]
+
+Wow, that sure is a lot of stack operations!
+
+Part three: Writing a simple optimizer
+--------------------------------------
+
+We're going to perform [peephole optimizations][peephole.wiki] on our IR. Such
+optimizations work on only a few instructions at at time, and translate them
+equivalent but _better_ code. We will go for fewer instructions.
+
+In the IR above, we see an obvious improvement. Instructions like
+
+    push rdi
+    pop rax
+
+can surely be translated to
+
+    mov rax, rdi
+
+Let's write a function for that. We'll also eliminate nonsensical instructions
+like `mov rax, rax`.
+
+    def optimize(ir):
+        def fetch(n):
+            if n < len(ir):
+                return ir[n]
+            else:
+                return None, None, None
+
+        index = 0
+        while index < len(ir):
+            op1, a1, b1 = fetch(index)
+            op2, a2, b2 = fetch(index + 1)
+            op3, a3, b3 = fetch(index + 2)
+            op4, a4, b4 = fetch(index + 3)
+
+            # Removed no-op movs
+            if op1 == "mov" and a1 == b1:
+                index += 1
+                continue
+
+            # Short-circuit push x/pop y
+            if op1 == "push" and op2 == "pop":
+                index += 2
+                yield "mov", a2, a1
+                continue
+
+            index += 1
+            yield op1, a1, b1
+
+Instead of showing that this actually works, we'll just throw in a few other
+optimizations. Just note that writing such optimizations are deceptively
+simple. It's very easy to do something that seem to make sense, only to see
+your program crash.
+
+A construct like
+
+    mov rsi, rax
+    mov rbx, rsi
+
+can surely be translated to
+
+    mov rbx, rax
+
+so we'll add that as well:
+
+    if op1 == op2 == "mov" and a1 == b2:
+        index += 2
+        yield "mov", a2, b1
+        continue
+
+Finally, the short-circuit of pop and push can be extended so that it works
+over one or several unrelated instructions. Take
+
+    push rax
+    mov rsi, rax
+    pop rbx
+
+Since RAX isn't modified in `mov rsi, rax`, we can just write
+
+    mov rsi, rax
+    mov rbx, rax
+
+We have to be careful that the middle instruction isn't a push, though.
+So we'll add
+
+    if op1 == "push" and op3 == "pop" and op2 not in ("push", "pop"):
+        if a2 != a3:
+            index += 3
+            yield "mov", a3, a1
+            yield op2, a2, b2
+            continue
+
+There is nothing wrong with supporting an indefinite amount of middle
+instructions, but we won't do that here.
+
+With these instructions, let's try to optimize the above IR. The complete
+optimization function is
+
+    def optimize(ir):
+        def fetch(n):
+            if n < len(ir):
+                return ir[n]
+            else:
+                return None, None, None
+
+        index = 0
+        while index < len(ir):
+            op1, a1, b1 = fetch(index)
+            op2, a2, b2 = fetch(index + 1)
+            op3, a3, b3 = fetch(index + 2)
+
+            if op1 == "mov" and a1 == b1:
+                index += 1
+                continue
+
+            if op1 == op2 == "mov" and a1 == b2:
+                index += 2
+                yield "mov", a2, b1
+                continue
+
+            if op1 == "push" and op2 == "pop":
+                index += 2
+                yield "mov", a2, a1
+                continue
+
+            if op1 == "push" and op3 == "pop" and op2 not in ("push", "pop"):
+                if a2 != a3:
+                    index += 3
+                    yield "mov", a3, a1
+                    yield op2, a2, b2
+                    continue
+
+            index += 1
+            yield op1, a1, b1
+
+The IR code was
+
+    [('push', 'rdi', None),
+     ('push', 'rdi', None),
+     ('pop', 'rax', None),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('push', 'rsi', None),
+     ('push', 'rsi', None),
+     ('pop', 'rax', None),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('pop', 'rbx', None),
+     ('pop', 'rax', None),
+     ('sub', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('pop', 'rax', None),
+     ('ret', None, None)]
+
+Running that through `optimize` yields
+
+    >>> pprint(list(optimize(ir)))
+    [('push', 'rdi', None),
+     ('mov', 'rax', 'rdi'),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('push', 'rsi', None),
+     ('mov', 'rax', 'rsi'),
+     ('pop', 'rbx', None),
+     ('imul', 'rax', 'rbx'),
+     ('mov', 'rbx', 'rax'),
+     ('pop', 'rax', None),
+     ('sub', 'rax', 'rbx'),
+     ('mov', 'rax', 'rax'),
+     ('ret', None, None)]
+
+saving us four instructions. But we still got a few spots left. The first three
+instructions should be optimizable. Let's run two passes on the IR:
+
+    >>> pprint(list(optimize(list(optimize(ir)))))
+    [('mov', 'rbx', 'rdi'),
+     ('mov', 'rax', 'rdi'),
+     ('imul', 'rax', 'rbx'),
+     ('push', 'rax', None),
+     ('mov', 'rbx', 'rsi'),
+     ('mov', 'rax', 'rsi'),
+     ('imul', 'rax', 'rbx'),
+     ('mov', 'rbx', 'rax'),
+     ('pop', 'rax', None),
+     ('sub', 'rax', 'rbx'),
+     ('ret', None, None)]
+
+We've now saved seven instructions. Our optimizer won't be able to improve this
+code any further. We could add more peephole optimizations, but another good
+technique would be to use a real register allocated so that we use the full
+spectrum of available registers. The IR compiler could then just assign values
+to unique registers like `reg1`, `reg2` and so on, then the allocator would
+choose how to populate the available registers properly. This is actually a hot
+topic for research, and especially for JIT compilation because the general
+problem is NP-complete.
+
+Part four: Translating IR to x86-64 machine code
+------------------------------------------------
+
+So, we have translated Python bytecode to IR and we have done some
+optimizations on it. We are finally ready to assemble it to machine code!
+
+Our approach will be to write an assembler class that emits instructions. If we
+use the same name for the emitter methods as in the IR code, and use the same
+signature for all, then we can just blindly assemble the whole IR in a short
+loop:
+
+    assembler = Assembler(mj.PAGESIZE)
+
+    for name, a, b in ir:
+        emit = getattr(assembler, name)
+        emit(a, b)
+
+If the instruction is `mov rax, rbx`, then `emit` will point to `assembler.mov`
+and the call will therefore be `assembler.mov("rax", "rbx")`.
+
+Let's write an assembler class. We copy the code for `address`, `little_endian`
+and import `create_block` from the [code in the previous post][previous-post].
+
+    class Assembler(object):
+        def __init__(self, size):
+            self.block = mj.create_block(size)
+            self.index = 0
+            self.size = size
+
+        @property
+        def address(self):
+            """Returns address of block in memory."""
+            return ctypes.cast(self.block, ctypes.c_void_p).value
+
+        def little_endian(self, n):
+            """Converts 64-bit number to little-endian format."""
+            return [(n & (0xff << i*2)) >> i*8 for i in range(8)]
+
+        def emit(self, *args):
+            """Writes machine code to memory block."""
+            for code in args:
+                self.block[self.index] = code
+                self.index += 1
+
+        def ret(self, a, b):
+            self.emit(0xc3)
+
+        # ...
+
+So calling `assembler.ret(None, None)` will set the first machine code byte to
+0xc3. That's how `retq` is encoded. To find the encoding of other instructions,
+I mainly used the [NASM][nasm] assembler. Putting the following in a file
+`sandbox.asm`,
+
+    bits 64
+    section .text
+    mov rax, rcx
+    mov rax, rdx
+    mov rax, rbx
+    mov rax, rsp
+
+I assembled it with
+
+    $ nasm -felf64 sandbox.asm -osandbox.o
+
+(`-fmacho64` for macOS) and dumped the machine code with
+
+    $ objdump -d sandbox.o
+
+    sandbox.o:     file format elf64-x86-64
+
+
+    Disassembly of section .text:
+
+    0000000000000000 <.text>:
+       0:   48 89 c8                mov    %rcx,%rax
+       3:   48 89 d0                mov    %rdx,%rax
+       6:   48 89 d8                mov    %rbx,%rax
+       9:   48 89 e0                mov    %rsp,%rax
+
+It seems like the 64-bit `movq` (which _we_ just call `mov`) is encoded with
+the prefix `0x48 0x89` with the source and destination registers stored in the
+last byte.  Digging into a few manuals, we see that they are encoded using
+three bits each.  We'll write a method for that.
+
+    def registers(self, a, b=None):
+        """Encodes one or two registers for machine code instructions."""
+        order = ("rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi")
+        enc = order.index(a)
+        if b is not None:
+            enc = enc << 3 | order.index(b)
+        return enc
+
+For the `movq` instruction, we can now write
+
+    def mov(self, a, b):
+        self.emit(0x48, 0x89, 0xc0 | self.registers(b, a))
+
+The rest of the instructions are done in a similar manner, except for moving
+immediate (i.e., constant) values into registers.
+
+    def ret(self, a, b):
+        self.emit(0xc3)
+
+    def push(self, a, _):
+        self.emit(0x50 | self.registers(a))
+
+    def pop(self, a, _):
+        self.emit(0x58 | self.registers(a))
+
+    def imul(self, a, b):
+        self.emit(0x48, 0x0f, 0xaf, 0xc0 | self.registers(a, b))
+
+    def add(self, a, b):
+        self.emit(0x48, 0x01, 0xc0 | self.registers(b, a))
+
+    def sub(self, a, b):
+        self.emit(0x48, 0x29, 0xc0 | self.registers(b, a))
+
+    def neg(self, a, _):
+        self.emit(0x48, 0xf7, 0xd8 | self.register(a))
+
+    def mov(self, a, b):
+        self.emit(0x48, 0x89, 0xc0 | self.registers(b, a))
+
+    def immediate(self, a, number):
+        self.emit(0x48, 0xb8 | self.registers(a), *self.little_endian(number))
+
+The only special thing about the last method is that we have to use a different
+prefix and encode the number in little-endian format.
+
+The final part
+--------------
+
+Finally, we can tie everything together. Given the function
+
+    def foo(a, b):
+      return a*a - b*b
+
+we first extract the Python bytecode, using `ord` to map bytes to integers, and
+any constants
+
+    bytecode = map(ord, foo.func_code.co_code)
+    constants = foo.func_code.co_consts
+
+Compiling to IR
+
+    ir = Compiler(bytecode, constants).compile()
+    ir = list(ir)
+
+Perform a few optimization passes:
+
+    ir = list(optimize(ir))
+    ir = list(optimize(ir))
+    ir = list(optimize(ir))
+
+Assemble to native code
+
+    assembler = Assembler(mj.PAGESIZE)
+    for name, a, b in ir:
+        emit = getattr(assembler, name)
+        emit(a, b)
+
+Make the memory block executable
+
+    mj.make_executable(assembler.block, assembler.size)
+
+We use `ctypes` to set the correct signature and cast the code to a callable
+Python function. We can get the number of arguments with `co_argcount`, and we
+treat input arguments as signed 64-bit integers.
+
+    argcount = foo.func_code.co_argcount
+    signature = ctypes.CFUNCTYPE(*[ctypes.c_int64] * argcount)
+    signature.restype = ctypes.c_int64
+
+Finally,
+
+    native_foo = signature(assembler.address)
+    print(native_foo(2, 3))
+
+It prints -5.
+
+To disassemble the code, we can use the [Capstone disassembler][capstone] right
+within Python. It's not a built-in module, so you need to install it yourself.
+Or you can break into the Python process with a debugger. Here is the
+disassembly for `native_foo`:
+
+    0x7f1133351000:       mov     rbx, rdi
+    0x7f1133351003:       mov     rax, rdi
+    0x7f1133351006:       imul    rax, rbx
+    0x7f113335100a:       push    rax
+    0x7f113335100b:       mov     rbx, rsi
+    0x7f113335100e:       mov     rax, rsi
+    0x7f1133351011:       imul    rax, rbx
+    0x7f1133351015:       mov     rbx, rax
+    0x7f1133351018:       pop     rax
+    0x7f1133351019:       sub     rax, rbx
+    0x7f113335101c:       ret
+
+You can try out different functions, for example
+
+    def bar(n):
+      return n * 0x101
+
+turns into
+
+    0x7f07d16a7000:       mov     rbx, rdi
+    0x7f07d16a7003:       movabs  rax, 0x101
+    0x7f07d16a700d:       imul    rax, rbx
+    0x7f07d16a7011:       ret
+
+and
+
+    def baz(a, b, c):
+      a -= 1
+      return a + 2*b -c
+
+becomes
+
+    0x7f13fba09000:       push    rdi
+    0x7f13fba09001:       movabs  rax, 1
+    0x7f13fba0900b:       mov     rbx, rax
+    0x7f13fba0900e:       pop     rax
+    0x7f13fba0900f:       sub     rax, rbx
+    0x7f13fba09012:       mov     rdi, rax
+    0x7f13fba09015:       push    rdi
+    0x7f13fba09016:       movabs  rax, 2
+    0x7f13fba09020:       mov     rbx, rax
+    0x7f13fba09023:       mov     rax, rsi
+    0x7f13fba09026:       imul    rax, rbx
+    0x7f13fba0902a:       pop     rbx
+    0x7f13fba0902b:       add     rax, rbx
+    0x7f13fba0902e:       mov     rbx, rdx
+    0x7f13fba09031:       sub     rax, rbx
+    0x7f13fba09034:       ret
+
+You may wonder how fast this runs. The answer is: Slow. The reason is: Because
+there is inherent overhead when calling into native code with `ctypes`. It
+needs to convert arguments and so on. I also believe (but haven't
+double-checked) that it saves some registers, because per the convention, we
+should have restored RBX before exiting.
+
+But it would be interesting to compile larger functions with native function
+calls, loops and so on, and compare that with Python. At that point, I believe
+you'll see the native code going much faster.
+
+What's next?
+------------
+
+I believe this is good for learning, so play around a bit. Try to make a
+register allocator, for example. Create more peephole optimizations. Add
+support for calling other functions, loops.
+
+With a decorator, you should be able to swap out class methods on the fly with
+compiled ones. That's exactly what  [Numba][numba] does, but ours is just a
+drop in the ocean compared to that.
+
+While we took the approach of translating Python bytecode, another good
+technique is to use the `ast` module to traverse the abstract syntax tree. A
+guy [did that][pyast64].
+
+[amd64.abi]: https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf
+[capstone]: http://www.capstone-engine.org/lang_python.html
+[constant-folding]: https://en.wikipedia.org/wiki/Constant_folding
+[cpython-eval]: https://github.com/python/cpython/blob/1896793/Python/ceval.c#L1055
+[github]: https://github.com/cslarsen/minijit
+[hn.front]: https://news.ycombinator.com/front?day=2017-11-09
+[hn]: https://news.ycombinator.com/item?id=15665581
+[ir.wiki]: https://en.wikipedia.org/wiki/Intermediate_representation
+[minijit.github]: https://github.com/cslarsen/minijit
+[mj.github]: https://github.com/cslarsen/minijit
+[nasm]: http://www.nasm.us
+[numba]: https://numba.pydata.org/
+[peephole.wiki]: https://en.wikipedia.org/wiki/Peephole_optimization
+[previous-post]: /post/python-jit/
+[pyast64]: https://github.com/benhoyt/pyast64
+[python.eval]: https://github.com/python/cpython/blob/1896793/Python/ceval.c#L1055
+[python.opcodes]: https://github.com/python/cpython/blob/master/Include/opcode.h
+[register-allocation.wiki]: https://en.wikipedia.org/wiki/Register_allocation
+[registers.wiki]: https://en.wikipedia.org/wiki/Processor_register
+[rpn.wiki]: https://en.wikipedia.org/wiki/Reverse_Polish_notation
+[shunting-yard.wiki]: https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+[ssa.wiki]: https://en.wikipedia.org/wiki/Static_single_assignment_form
+[stack-machine]: https://en.wikipedia.org/wiki/Stack_machine
+[stack-register.wiki]: https://en.wikipedia.org/wiki/Stack_register
+[tac.wiki]: https://en.wikipedia.org/wiki/Three-address_code
+]]></content:encoded>
+      <dc:date>2017-11-16T19:52:12+00:00</dc:date>
+    </item>
     <item>
       <title>Writing a basic x86-64 JIT compiler from scratch in stock Python</title>
       <link>https://csl.name/post/python-jit/</link>
@@ -22,7 +810,8 @@ compiler (JIT) in CPython, using only the built-in modules.
 compiler (JIT)][jit.wiki] in CPython, using only the built-in modules.
 
 Update: This post made the [front page of HN][hn.front], and I've incorporated
-some of the [discussion feedback][hn].
+some of the [discussion feedback][hn]. I've also written a [follow-up
+post][follow.up] that JITs Python bytecode to x86-64.
 
 The code here specifically targets the UNIX systems macOS and Linux, but should
 be easily translated to other systems such as Windows. The complete code is
@@ -270,8 +1059,8 @@ multiplies RAX and RDI and puts the result in RAX. Finally, we pop a 64-bit
 return address off the stack and jump to it with RETQ. At this level, it's easy
 to imagine how one could implement [continuation-passing style][cps].
 
-Note that the the constant `0xdeadbeefed` is in little-endian format. We need
-to remember to do the same when we patch the code. (By the way, a good mnemonic
+Note that the constant `0xdeadbeefed` is in little-endian format. We need to
+remember to do the same when we patch the code. (By the way, a good mnemonic
 for remembering the word order is that little endian means "little-end first").
 
 We are now ready to put everything in a Python function.
@@ -492,10 +1281,11 @@ focuses solely on the compilation stage. Stay tuned!
 [ctypes.doc]: https://docs.python.org/3/library/ctypes.html#module-ctypes
 [deadbeef]: https://en.wikipedia.org/wiki/Magic_number_(programming)
 [fefe]: http://www.fefe.de/source-code-optimization.pdf
+[follow.up]: /post/python-compiler/
 [forth.wiki]: https://en.wikipedia.org/wiki/Forth_(programming_language)
 [github]: https://github.com/cslarsen/minijit
-[hn]: https://news.ycombinator.com/item?id=15665581
 [hn.front]: https://news.ycombinator.com/front?day=2017-11-09
+[hn]: https://news.ycombinator.com/item?id=15665581
 [jit.wiki]: https://en.wikipedia.org/wiki/Just-in-time_compilation
 [jonesforth]: https://github.com/nornagon/jonesforth/blob/master/jonesforth.S
 [machine.code.wiki]: https://en.wikipedia.org/wiki/Machine_code
@@ -1337,31 +2127,21 @@ To get started, we need a function `println` that simply prints all of its
 arguments. We'll create a variadic function that simply calls `display` on all
 its arguments, and put it in a library called `print`.
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(define-library (print)
-  (import (scheme base)
-          (scheme write))
-  (export println)
-  (begin
-    (define (println . args)
-      &quot;Prints all arguments and a newline.&quot;
-      (for-each display args)
-      (newline))))</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/goto/print.sld %}
+{% endhighlight %}
 
 Here's a test program
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base) ; needed for the + function
-        (print))      ; our println function
-
-(println &quot;Testing the print library.&quot;)
-(println &quot;1 + 2 = &quot; (+ 1 2))
-(println &quot;Have a nice day!&quot;)</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/goto/print-example.scm %}
+{% endhighlight %}
 
 Running it produces
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ chibi-scheme print-example.scm
-Testing the print library.
-1 + 2 = 3
-Have a nice day!</code></pre></figure>
+{% highlight bash %}
+{% include scheme/goto/print-example.out %}
+{% endhighlight %}
 
 What are continuations?
 =======================
@@ -1493,43 +2273,15 @@ of `goto-label` is straight-forward:
 The final program can be run in [Chibi Scheme](chibi). Put the following in a
 file called `print-person.scm`:
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
-        (scheme write))
-
-(define (println . args)
-  (for-each display args)
-  (newline))
-
-(define (set-label initial-return-value)
-  (call/cc
-    (lambda (continuation)
-      (set! label continuation)
-      initial-return-value)))
-
-(define (goto-label new-value)
-  (label new-value))
-
-(define label #f)
-
-(define (print-person name age)
-  (println name &quot; is &quot; (set-label age) &quot; years old.&quot;))
-
-(println &quot;Value of label: &quot; label)
-(print-person &quot;John Doe&quot; 123)
-
-(println &quot;Value of label after calling print-person: &quot; label)
-(goto-label 500)
-
-(println &quot;Done!&quot;)</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/goto/print-person.scm %}
+{% endhighlight %}
 
 Executing it gives:
 
-<figure class="highlight"><pre><code class="language-shell" data-lang="shell">$ chibi-scheme print-person.scm
-Value of label: #f
-John Doe is 123 years old.
-Value of label after calling print-person: #&lt;procedure #f&gt;
-John Doe is 500 years old.
-Done!</code></pre></figure>
+{% highlight shell %}
+{% include scheme/goto/print-person.out %}
+{% endhighlight %}
 
 Now I'll suggest a few mental models that can be used to understand how
 continuations work. After that, we'll revisit this example, but wrap everything
@@ -1697,45 +2449,16 @@ What we want is to be able to write
 
 and with value-passing:
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
-        (scheme write)
-        (print)
-        (goto))
-
-(define *age* #f)
-(define *name* #f)
-
-(define (print-person name age)
-  (println (set-label *name* name) &quot; is &quot;
-           (set-label *age* age) &quot; years old.&quot;))
-
-(print-person &quot;John Doe&quot; &quot;123&quot;)
-(goto-label *name* &quot;Jane Doe&quot;)
-(goto-label *age* &quot;500&quot;)</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/goto/goto-example.scm %}
+{% endhighlight %}
 
 We'll use the same strategy as before, except that `set-label` and `goto-label`
 can be invoked using a label and value, or only a label.
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(define-library (goto)
-  (import (scheme base)
-          (scheme write)
-          (scheme case-lambda))
-  (export set-label
-          goto-label)
-  (begin
-    (define goto-label
-      (case-lambda
-        ((label) (label &#39;()))
-        ((label value) (label value))))
-
-    (define-syntax set-label
-      (syntax-rules ()
-        ((_ label value)
-           (call/cc (lambda (k)
-                      (if (not label) (set! label k))
-                      value)))
-        ((_ label)
-           (set-label label &#39;()))))))</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/goto/goto.sld %}
+{% endhighlight %}
 
 The `goto-label` function uses `case-lambda`, which patterns matches on its
 invocation form. The first line matches calls to `(goto-label <label>)`, while
@@ -1747,10 +2470,9 @@ single underscore instead of typing out the full name of the macro.
 Put that in a file called `goto.sld`, and you should be able to run the above
 examples:
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ chibi-scheme goto-example.scm
-John Doe is 123 years old.
-Jane Doe is 123 years old.
-John Doe is 500 years old.</code></pre></figure>
+{% highlight bash %}
+{% include scheme/goto/goto-example.out %}
+{% endhighlight %}
 
 Delimited and undelimited continuations
 =======================================
@@ -1795,50 +2517,15 @@ To make our exception library useful, we'll wrap the functionality in macros.
 The basic idea is to have a global ``throw`` function that we pass the
 continuation on to.
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">(import (scheme base)
-        (scheme write)
-        (print))
-
-(define throw (lambda () #f))
-
-(define-syntax try
-  (syntax-rules (catch)
-    ((try (catch thunk) body ...)
-     (call/cc
-       (lambda (exit)
-         (set! throw
-           (lambda (error)
-             (println &quot;Exception: &quot; error)
-             (exit)))
-         body ...)))))
-
-(try
-  (catch
-    (lambda (error)
-      (println &quot;Error: &quot; error)))
-
-  (define (divide a b)
-    (println &quot;About to perform &quot; a &quot;/&quot; b)
-    (if (zero? b)
-      (throw &quot;Divide by zero&quot;)
-      (println a &quot;/&quot; b &quot; = &quot; (/ a b))))
-
-  (divide 10 2)
-  (divide 1 3)
-  (divide 3 0))
-
-(println &quot;End of program&quot;)</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/exceptions/try-catch-0.scm %}
+{% endhighlight %}
 
 Running the above program,
 
-<figure class="highlight"><pre><code class="language-scheme" data-lang="scheme">$ chibi-scheme try-catch-0.scm
-About to perform 10/2
-10/2 = 5
-About to perform 1/3
-1/3 = 1/3
-About to perform 3/0
-Exception: Divide by zero
-End of program</code></pre></figure>
+{% highlight scheme %}
+{% include scheme/exceptions/try-catch-0.out %}
+{% endhighlight %}
 
 A better try-catch library
 --------------------------
@@ -3719,14 +4406,7 @@ come from C.
 Save the following in `hello-world.scm`.
 
 <pre>
-; Hello world in R7RS Scheme.
-
-(import (scheme base)
-        (scheme write))
-
-(display "Hello, world!")
-(newline)
-
+{% include scheme/tutorial/hello-world.scm %}
 </pre>
 
 This can be run by typing
@@ -3777,35 +4457,7 @@ Let's create a small family of variadic `print` functions that all print to the
 default output port. We'll bundle them up in a library.
 
 <pre>
-(define-library (print)
-  (import (scheme base)
-          (scheme write))
-
-  (export print
-          println
-          prints
-          printsln)
-  (begin
-    ;; Print arguments.
-    (define (print . args)
-      (for-each display args))
-
-    ;; Print arguments, space separated.
-    (define (prints . args)
-      (for-each (lambda (s)
-                  (display s)
-                  (display " ")) args))
-
-    ;; Print arguments and a newline.
-    (define (println . args)
-      (apply print args)
-      (newline))
-
-    ;; Print arguments, space separated, newline.
-    (define (printsln . args)
-      (apply prints args)
-      (newline))))
-
+{% include scheme/tutorial/print.sld %}
 </pre>
 
 To use them, you need to `(import (print))` in your code.  The implementations
@@ -4109,19 +4761,21 @@ quicker while feeling that you're in control.
 
 Create a directory `foo` and then put the code below into `foo.cpp`.
 
-<figure class="highlight"><pre><code class="language-c--" data-lang="c++">#include &lt;qapplication.h&gt;
-#include &lt;qpushbutton.h&gt;
+{% highlight C++ %}
+#include <qapplication.h>
+#include <qpushbutton.h>
 
 int main(int argc, char** argv)
 {
   QApplication app(argc, argv);
 
-  QPushButton hello(&quot;Hello world!&quot;, 0);
+  QPushButton hello("Hello world!", 0);
   hello.resize(100, 30);
   hello.show();
 
   return app.exec();
-}</code></pre></figure>
+}
+{% endhighlight %}
 
 Using `qmake`, set up a new Qt project and create a GNU makefile.
 
@@ -4650,8 +5304,10 @@ Here are two quines I made wrote in C&mdash;without cheating! They are both
 based on the same idea. The first one is macro&dash;based, utilizing the
 ability for macros to quote parameters.
 
-<figure class="highlight"><pre><code class="language-c--" data-lang="c++">#define Q(x) #x;x
-char *q=Q(main(){printf(&quot;#define Q(x) #x;x\nchar *q=Q(&quot;);printf(q);printf(&quot;)\n&quot;);})</code></pre></figure>
+{% highlight C++ %}
+#define Q(x) #x;x
+char *q=Q(main(){printf("#define Q(x) #x;x\nchar *q=Q(");printf(q);printf(")\n");})
+{% endhighlight %}
 
 Compiling and running it produces an exact copy of itself:
 
@@ -4665,15 +5321,19 @@ compilation of the next quine, the quotation degraded quickly.  The trick I
 used was just to use `putchar` instead.  Not extremely elegant, but simple
 to understand.
 
-<figure class="highlight"><pre><code class="language-c--" data-lang="c++">char*p=&quot;main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);put
-s(p);}&quot;;
-main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}</code></pre></figure>
+{% highlight C++ %}
+char*p="main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);put
+s(p);}";
+main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}
+{% endhighlight %}
 
 Compiling and running the above program produces
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ gcc --no-warnings putchar-quine.c -o p &amp;&amp; ./p
-char*p=&quot;main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}&quot;;
-main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}</code></pre></figure>
+{% highlight bash %}
+$ gcc --no-warnings putchar-quine.c -o p && ./p
+char*p="main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}";
+main(){putchar(99);putchar(104);putchar(97);putchar(114);putchar(42);putchar(112);putchar(61);putchar(34);printf(p);putchar(34);putchar(59);putchar(10);puts(p);}
+{% endhighlight %}
 
 Now, let's ponder the last example for a bit. You can see that I'm just
 writing out a bunch of numerical codes, with some boilerplate code to get it
@@ -4715,10 +5375,11 @@ average input and quadratic in the worst case. Update: Today I would have used
 the word *in practice* instead of *on average*, because there really is nothing
 fancy about this code (except that it's a bit cute).
 
-<figure class="highlight"><pre><code class="language-c--" data-lang="c++">/*
+{% highlight C++ %}
+/*
  * Find the longest palindrome in the text.
  *
- * This is Greplin&#39;s first challenge, and I originally solved it in Python.
+ * This is Greplin's first challenge, and I originally solved it in Python.
  *
  * This algorithm is linear on the average input, but has a quadratic
  * worst case running time.  There exists an even better algorithm, but
@@ -4729,33 +5390,33 @@ fancy about this code (except that it's a bit cute).
  * Christian Stigen Larsen
  */
 
-#include &lt;stdio.h&gt;
+#include <stdio.h>
 
 static const char text[] =
-  &quot;Fourscoreandsevenyearsagoourfaathersbroughtforthonthiscontainentanewnati&quot;
-  &quot;onconceivedinzLibertyanddedicatedtothepropositionthatallmenarecreatedequ&quot;
-  &quot;alNowweareengagedinagreahtcivilwartestingwhetherthatnaptionoranynartions&quot;
-  &quot;oconceivedandsodedicatedcanlongendureWeareqmetonagreatbattlefiemldoftzha&quot;
-  &quot;twarWehavecometodedicpateaportionofthatfieldasafinalrestingplaceforthose&quot;
-  &quot;whoheregavetheirlivesthatthatnationmightliveItisaltogetherfangandpropert&quot;
-  &quot;hatweshoulddothisButinalargersensewecannotdedicatewecannotconsecrateweca&quot;
-  &quot;nnothallowthisgroundThebravelmenlivinganddeadwhostruggledherehaveconsecr&quot;
-  &quot;ateditfaraboveourpoorponwertoaddordetractTgheworldadswfilllittlenotlenor&quot;
-  &quot;longrememberwhatwesayherebutitcanneverforgetwhattheydidhereItisforusthel&quot;
-  &quot;ivingrathertobededicatedheretotheulnfinishedworkwhichtheywhofoughthereha&quot;
-  &quot;vethusfarsonoblyadvancedItisratherforustobeherededicatedtothegreattdafsk&quot;
-  &quot;remainingbeforeusthatfromthesehonoreddeadwetakeincreaseddevotiontothatca&quot;
-  &quot;useforwhichtheygavethelastpfullmeasureofdevotionthatweherehighlyresolvet&quot;
-  &quot;hatthesedeadshallnothavediedinvainthatthisnationunsderGodshallhaveanewbi&quot;
-  &quot;rthoffreedomandthatgovernmentofthepeoplebythepeopleforthepeopleshallnotp&quot;
-  &quot;erishfromtheearth&quot;;
+  "Fourscoreandsevenyearsagoourfaathersbroughtforthonthiscontainentanewnati"
+  "onconceivedinzLibertyanddedicatedtothepropositionthatallmenarecreatedequ"
+  "alNowweareengagedinagreahtcivilwartestingwhetherthatnaptionoranynartions"
+  "oconceivedandsodedicatedcanlongendureWeareqmetonagreatbattlefiemldoftzha"
+  "twarWehavecometodedicpateaportionofthatfieldasafinalrestingplaceforthose"
+  "whoheregavetheirlivesthatthatnationmightliveItisaltogetherfangandpropert"
+  "hatweshoulddothisButinalargersensewecannotdedicatewecannotconsecrateweca"
+  "nnothallowthisgroundThebravelmenlivinganddeadwhostruggledherehaveconsecr"
+  "ateditfaraboveourpoorponwertoaddordetractTgheworldadswfilllittlenotlenor"
+  "longrememberwhatwesayherebutitcanneverforgetwhattheydidhereItisforusthel"
+  "ivingrathertobededicatedheretotheulnfinishedworkwhichtheywhofoughthereha"
+  "vethusfarsonoblyadvancedItisratherforustobeherededicatedtothegreattdafsk"
+  "remainingbeforeusthatfromthesehonoreddeadwetakeincreaseddevotiontothatca"
+  "useforwhichtheygavethelastpfullmeasureofdevotionthatweherehighlyresolvet"
+  "hatthesedeadshallnothavediedinvainthatthisnationunsderGodshallhaveanewbi"
+  "rthoffreedomandthatgovernmentofthepeoplebythepeopleforthepeopleshallnotp"
+  "erishfromtheearth";
 
 void print_best(const char* l, const char* r)
 {
   static int best = 2;
 
-  if ( r-l &gt; best )
-    printf(&quot;%.*s\n&quot;, (best=r-l), l);
+  if ( r-l > best )
+    printf("%.*s\n", (best=r-l), l);
 }
 
 int main()
@@ -4775,17 +5436,20 @@ int main()
   }
 
   return 0;
-}</code></pre></figure>
+}
+{% endhighlight %}
 
 The output is
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ gcc -O3 -W -Wall gettysburg.c -ogetty &amp;&amp; time ./getty
+{% highlight bash %}
+$ gcc -O3 -W -Wall gettysburg.c -ogetty && time ./getty
 eve
 ranynar
 
 real  0m0.004s
 user  0m0.001s
-sys   0m0.002s</code></pre></figure>
+sys   0m0.002s
+{% endhighlight %}
 
 So the longest palindrome in The Gettysburg Address is <i>ranynar</i>.
 
@@ -4808,15 +5472,18 @@ was invented, you can download and use it freely. I got mine off a site with
 all the stuff in different directories. Here's what I did to prepare them,
 all in one jolly line of UNIX goodness:
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ find shakespeare/ -type f \        # for all files
-    | xargs sed &#39;s/^[A-Za-z]*//g&#39; \  # only keep alphabetical chars
+{% highlight bash %}
+$ find shakespeare/ -type f \        # for all files
+    | xargs sed 's/^[A-Za-z]*//g' \  # only keep alphabetical chars
     | tr A-Z a-z \                   # translate to lowercase
     | tr -dC a-z \                   # remove anything BUT alphabetical chars
-    &gt; shakespeare.txt                # output to one big file</code></pre></figure>
+    > shakespeare.txt                # output to one big file
+{% endhighlight %}
 
 I compiled my code and ran it on the file:
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ llvm-g++ -O4 -flto pali.cpp -o pali
+{% highlight bash %}
+$ llvm-g++ -O4 -flto pali.cpp -o pali
 $ cat shakespeare.txt | time ./pali
 ll
 ll
@@ -4842,7 +5509,8 @@ madammadammadam
 
 real    0m0.026s
 user    0m0.022s
-sys     0m0.004s</code></pre></figure>
+sys     0m0.004s
+{% endhighlight %}
 
 The longest palindromes appear in the lines:
 
@@ -4854,11 +5522,12 @@ from the play [Richard III][rich3]. The preparsing of the collected works
 above includes the character's name. Without it, the output is a bit
 different:
 
-<figure class="highlight"><pre><code class="language-bash" data-lang="bash">$ find shakespeare/ -type f \
+{% highlight bash %}
+$ find shakespeare/ -type f \
     | xargs cat \
-    | sed -e &#39;s/^[A-Za-z]*//g&#39; \
+    | sed -e 's/^[A-Za-z]*//g' \
     | tr A-Z a-z \
-    | tr -dC a-z &gt; collected-works-no-names.txt
+    | tr -dC a-z > collected-works-no-names.txt
 
 $ cat collected-works-no-names.txt | ./pali
 ama
@@ -4866,7 +5535,8 @@ lonanol
 nymedemyn
 ereherehere
 reherehereher
-illitmadamtilli</code></pre></figure>
+illitmadamtilli
+{% endhighlight %}
 
 The second last character-by-character palindrome comes from the tragedy
 [Troilus and Cressida][cressida]:
@@ -4924,73 +5594,17 @@ messages to a Linux syslog server.
 For this to work you must configure your syslog daemon to accept logs from
 the network.
 
-<figure class="highlight"><pre><code class="language-python" data-lang="python">&quot;&quot;&quot;
-Remote syslog client.
-
-Works by sending UDP messages to a remote syslog server. The remote server
-must be configured to accept logs from the network.
-
-License: PUBLIC DOMAIN
-Author: Christian Stigen Larsen
-
-For more information, see RFC 3164.
-&quot;&quot;&quot;
-
-import socket
-
-class Facility:
-  &quot;Syslog facilities&quot;
-  KERN, USER, MAIL, DAEMON, AUTH, SYSLOG, \
-  LPR, NEWS, UUCP, CRON, AUTHPRIV, FTP = range(12)
-
-  LOCAL0, LOCAL1, LOCAL2, LOCAL3, \
-  LOCAL4, LOCAL5, LOCAL6, LOCAL7 = range(16, 24)
-
-class Level:
-  &quot;Syslog levels&quot;
-  EMERG, ALERT, CRIT, ERR, \
-  WARNING, NOTICE, INFO, DEBUG = range(8)
-
-class Syslog:
-  &quot;&quot;&quot;A syslog client that logs to a remote server.
-
-  Example:
-  &gt;&gt;&gt; log = Syslog(host=&quot;foobar.example&quot;)
-  &gt;&gt;&gt; log.send(&quot;hello&quot;, Level.WARNING)
-  &quot;&quot;&quot;
-  def __init__(self,
-               host=&quot;localhost&quot;,
-               port=514,
-               facility=Facility.DAEMON):
-    self.host = host
-    self.port = port
-    self.facility = facility
-    self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-  def send(self, message, level):
-    &quot;Send a syslog message to remote host using UDP.&quot;
-    data = &quot;&lt;%d&gt;%s&quot; % (level + self.facility*8, message)
-    self.socket.sendto(data, (self.host, self.port))
-
-  def warn(self, message):
-    &quot;Send a syslog warning message.&quot;
-    self.send(message, Level.WARNING)
-
-  def notice(self, message):
-    &quot;Send a syslog notice message.&quot;
-    self.send(message, Level.NOTICE)
-
-  def error(self, message):
-    &quot;Send a syslog error message.&quot;
-    self.send(message, Level.ERR)
-
-  # ... add your own stuff here</code></pre></figure>
+{% highlight python %}
+{% include python/syslog_client.py %}
+{% endhighlight %}
 
 If you put it in a file `syslog_client.py` you can use it as a module.
 
-<figure class="highlight"><pre><code class="language-python" data-lang="python">&gt;&gt;&gt; import syslog_client
-&gt;&gt;&gt; log = syslog_client.Syslog(&quot;remote-host-name&quot;)
-&gt;&gt;&gt; log.send(&quot;howdy&quot;, syslog_client.WARNING)</code></pre></figure>
+{% highlight python %}
+>>> import syslog_client
+>>> log = syslog_client.Syslog("remote-host-name")
+>>> log.send("howdy", syslog_client.WARNING)
+{% endhighlight %}
 
 You can easily extend the class in several ways. E.g., you may want to add
 some convenience functions like `warn()`, etc.
@@ -5716,15 +6330,16 @@ it's definitely worth it.
 
 Let's make some simple functions in C. We'll call the file `myModule.c`.
 
-<figure class="highlight"><pre><code class="language-c" data-lang="c">#include &lt;Python.h&gt;
+{% highlight C %}
+#include <Python.h>
 
 /*
  * Function to be called from Python
  */
 static PyObject* py_myFunction(PyObject* self, PyObject* args)
 {
-  char *s = &quot;Hello from C!&quot;;
-  return Py_BuildValue(&quot;s&quot;, s);
+  char *s = "Hello from C!";
+  return Py_BuildValue("s", s);
 }
 
 /*
@@ -5733,16 +6348,16 @@ static PyObject* py_myFunction(PyObject* self, PyObject* args)
 static PyObject* py_myOtherFunction(PyObject* self, PyObject* args)
 {
   double x, y;
-  PyArg_ParseTuple(args, &quot;dd&quot;, &amp;x, &amp;y);
-  return Py_BuildValue(&quot;d&quot;, x*y);
+  PyArg_ParseTuple(args, "dd", &x, &y);
+  return Py_BuildValue("d", x*y);
 }
 
 /*
  * Bind Python function names to our C functions
  */
 static PyMethodDef myModule_methods[] = {
-  {&quot;myFunction&quot;, py_myFunction, METH_VARARGS},
-  {&quot;myOtherFunction&quot;, py_myOtherFunction, METH_VARARGS},
+  {"myFunction", py_myFunction, METH_VARARGS},
+  {"myOtherFunction", py_myOtherFunction, METH_VARARGS},
   {NULL, NULL}
 };
 
@@ -5751,8 +6366,9 @@ static PyMethodDef myModule_methods[] = {
  */
 void initmyModule()
 {
-  (void) Py_InitModule(&quot;myModule&quot;, myModule_methods);
-}</code></pre></figure>
+  (void) Py_InitModule("myModule", myModule_methods);
+}
+{% endhighlight %}
 
 Compiling dynamic libraries on Mac OS X is different from the usual gcc -shared
 you might be used to:
@@ -5775,10 +6391,12 @@ On Windows you can reportedly type
 
 Here's a simple program in Python to call your functions:
 
-<figure class="highlight"><pre><code class="language-python" data-lang="python">from myModule import *
+{% highlight Python %}
+from myModule import *
 
-print &quot;Result from myFunction:&quot;, myFunction()
-print &quot;Result from myOtherFunction(4.0, 5.0):&quot;, myOtherFunction(4.0, 5.0)</code></pre></figure>
+print "Result from myFunction:", myFunction()
+print "Result from myOtherFunction(4.0, 5.0):", myOtherFunction(4.0, 5.0)
+{% endhighlight %}
 
 The output is:
 
@@ -5793,6 +6411,6 @@ suggest you check out [SWIG][swig] or [Boost Python][boost.python].
 ]]></content:encoded>
       <dc:date>2006-03-28T00:00:00+00:00</dc:date>
     </item>
-    <dc:date>2017-11-08T21:03:00+00:00</dc:date>
+    <dc:date>2017-11-16T19:52:12+00:00</dc:date>
   </channel>
 </rss>
