@@ -40,7 +40,7 @@
         
         
         
-          16 Nov 2017
+          Posted 16 Nov 2017 &mdash; updated 21 Nov 2017
         
       </p>
     <p>This post shows how to write a basic JIT compiler for the Python bytecode,
@@ -50,17 +50,35 @@ using nothing but stock Python modules.</p>
 native code to callable Python functions. The complete code is available at
 <a href="https://github.com/cslarsen/minijit">github.com/cslarsen/minijit</a>.</p>
 
-<p>At the end of this post, we will be able to compile Python functions:</p>
-<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; def foo(a, b):
+<p>At the end of this post, we will be able to compile branchless Python functions
+performing arithmetic on signed 64-bit values:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; from jitcompiler import *
+&gt;&gt;&gt; @jit
+... def foo(a, b):
 ...   return a*a - b*b
 ...
-&gt;&gt;&gt; bar = compile_native(foo)
-&gt;&gt;&gt; bar(1, 2)
+-- Installing JIT for &lt;function foo at 0x102084cf8&gt;
+&gt;&gt;&gt; foo(2, 3)
+-- JIT-compiling &lt;function foo at 0x102084cf8&gt;
+-- Installed native code for &lt;function foo at 0x102084cf8&gt;
+-- Calling function &lt;CFunctionType object at 0x101fa6390&gt;
+-5
+&gt;&gt;&gt; foo(1, 2)
+-- Calling function &lt;CFunctionType object at 0x101fa6390&gt;
 -3
+&gt;&gt;&gt; print(disassemble(foo))
+0x101f79000 48 89 fb       mov rbx, rdi
+0x101f79003 48 89 f8       mov rax, rdi
+0x101f79006 48 0f af c3    imul rax, rbx
+0x101f7900a 50             push rax
+0x101f7900b 48 89 f3       mov rbx, rsi
+0x101f7900e 48 89 f0       mov rax, rsi
+0x101f79011 48 0f af c3    imul rax, rbx
+0x101f79015 48 89 c3       mov rbx, rax
+0x101f79018 58             pop rax
+0x101f79019 48 29 d8       sub rax, rbx
+0x101f7901c c3             ret 
 </code></pre></figure>
-<p>The <code>bar</code> function above will execute on bare metal. We will restrict ourselves
-to compiling branchless functions that operate on integer arithmetic.</p>
-
 <p>Our strategy is to translate Python bytecode to an <a href="https://en.wikipedia.org/wiki/Intermediate_representation">intermediate
 representation</a>, which will then be optimized before being emitted as
 x86-64 machine code. So the first part will be to understand how the bytecode
