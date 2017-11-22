@@ -10,8 +10,8 @@
 			<item>
 				<title>JIT compiling a subset of Python to x86-64</title>
 				
-					<description>&lt;p&gt;This post shows how to write a basic JIT compiler for the Python bytecode,
-using nothing but stock Python modules.&lt;/p&gt;
+					<description>&lt;p&gt;This post shows how to write a basic JIT compiler for the Python bytecode, from
+scratch, using nothing but stock Python modules.&lt;/p&gt;
 </description>
 				
 				<pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>

@@ -43,18 +43,19 @@
           Posted 16 Nov 2017 &mdash; updated 21 Nov 2017
         
       </p>
-    <p>This post shows how to write a basic JIT compiler for the Python bytecode,
-using nothing but stock Python modules.</p>
+    <p>This post shows how to write a basic JIT compiler for the Python bytecode, from
+scratch, using nothing but stock Python modules.</p>
 
 <p>We will leverage the code written in <a href="/post/python-jit/">a previous post</a> to bind
 native code to callable Python functions. The complete code is available at
 <a href="https://github.com/cslarsen/minijit">github.com/cslarsen/minijit</a>.</p>
 
 <p>At the end of this post, we will be able to compile branchless Python functions
-performing arithmetic on signed 64-bit values:</p>
+that perform arithmetic on signed 64-bit values:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; from jitcompiler import *
 &gt;&gt;&gt; @jit
-... def foo(a, b): return a*a - b*b
+... def foo(a, b):
+...     return a*a - b*b
 ...
 --- Installing JIT for &lt;function foo at 0x100c28c08&gt;
 &gt;&gt;&gt; foo(2, 3)
@@ -77,8 +78,8 @@ performing arithmetic on signed 64-bit values:</p>
 </code></pre></figure>
 <p>Our strategy is to translate Python bytecode to an <a href="https://en.wikipedia.org/wiki/Intermediate_representation">intermediate
 representation</a>, which will then be optimized before being emitted as
-x86-64 machine code. So the first part will be to understand how the bytecode
-works.</p>
+x86-64 machine code. So the first part will be to understand how the Python
+bytecode works.</p>
 
 <h2>Part one: How the Python bytecode works</h2>
 
@@ -125,8 +126,8 @@ as holding <em>values</em>.</p>
 operations can be serialized. For example, to compute an infix expression like</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">2*2 - 3*3
 </code></pre></figure>
-<p>we need to jump back and forth, calculating products before subtracting.
-But in a <em>postfix</em> system, we only need to scan forward.  For example, the
+<p>we have to jump back and forth, calculating products before subtracting.
+But in a <em>postfix</em> system, we need only scan forwards. For example, the
 above expression can be translated to <a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation">Reverse Polish Notation (RPN)</a>
 using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">shunting-yard algorithm</a>:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">2 2 * 3 3 * -
@@ -138,12 +139,21 @@ the bottom. For the final subtraction, we pop them off, perform the subtraction
 and push the result -5 on the stack.</p>
 
 <p>Now, imagine that the expression was actually written in a programming
-language.</p>
+language:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">subtract(multiply(2, 2), multiply(3, 3))
 </code></pre></figure>
-<p>The thing is, in postfix form, the order of evaluation becomes explicit:</p>
-<figure class="highlight"><pre><code class="language-text" data-lang="text">push 2, push 2, multiply, push 3, push 3, multiply, subtract
+<p>The thing is, in postfix form, the evaluation order becomes explicit:</p>
+<figure class="highlight"><pre><code class="language-text" data-lang="text">push 2
+push 2
+call multiply
+push 3
+push 3
+call multiply
+call subtract
 </code></pre></figure>
+<p>The <code>multiply</code> and <code>subtract</code> functions find their arguments on the stack. For
+subtract, the two arguments consist of the products <code>2*2</code> and <code>3*3</code>.</p>
+
 <p>The use of a stack makes it possible to execute instructions linearly, and this
 is essentially how stack machines operate. With that, you will probably
 understand most of the <a href="https://github.com/python/cpython/blob/master/Include/opcode.h">CPython opcodes</a> and its <a href="https://github.com/python/cpython/blob/1896793/Python/ceval.c#L1055">interpreter
@@ -155,10 +165,10 @@ loop</a>.</p>
 representation (IR)</a>. That is, in a form suitable for performing
 things like analysis, translation and optimization. Ours will be blissfully
 naive. We will forego things <a href="https://en.wikipedia.org/wiki/Static_single_assignment_form">single-static assignment (SSA)</a> and
-<a href="https://en.wikipedia.org/wiki/Register_allocation">register allocation</a> for the sake of simplicity, we
-will use something that resembles <a href="https://en.wikipedia.org/wiki/Three-address_code">three-address codes (TAC)</a>.</p>
+<a href="https://en.wikipedia.org/wiki/Register_allocation">register allocation</a> for the sake of simplicity.</p>
 
-<p>Our IR will consist of pseudo-assembly instructions in a list. For example</p>
+<p>Our IR will consist of pseudo-assembly instructions in a list, with a faint
+resemblance to <a href="https://en.wikipedia.org/wiki/Three-address_code">three address codes (TAC)</a>. For example</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">ir = [(&quot;mov&quot;, &quot;rax&quot;, 101),
       (&quot;push&quot;, &quot;rax&quot;, None)]
 </code></pre></figure>
