@@ -117,7 +117,7 @@ argument <code>a</code>. </p>
 
 <p>CPython — like the JVM, CLR, Forth and many others – is implemented as a <a href="https://en.wikipedia.org/wiki/Stack_machine">stack
 machine</a>. All the bytecode instructions operate on a <em>stack</em> of
-objects. For example, <code>LOAD_FAST</code> will <em>push</em> <code>a</code> reference to the variable <code>a</code>
+objects. For example, <code>LOAD_FAST</code> will <em>push</em> a reference to the variable <code>a</code>
 on the stack, while <code>BINARY_MULTIPLY</code> will pop off two, multiply them together
 and put their product on the stack. For our purposes, we will treat the stack
 as holding <em>values</em>.</p>
@@ -172,18 +172,18 @@ resemblance to <a href="https://en.wikipedia.org/wiki/Three-address_code">three 
 <figure class="highlight"><pre><code class="language-text" data-lang="text">ir = [(&quot;mov&quot;, &quot;rax&quot;, 101),
       (&quot;push&quot;, &quot;rax&quot;, None)]
 </code></pre></figure>
-<p>Contrary to TAC, we put operation first, followed by the destination and source
+<p>Contrary to TAC, we put the operation first, followed by the destination and source
 registers.  We use <code>None</code> to indicate unused registers and arguments.  It would
 be a very good idea to use unique, abstract registers names like <code>reg1</code>, <code>reg2</code>
 and so on, because it facilitates <a href="https://en.wikipedia.org/wiki/Register_allocation">register
-allocation</a>.  Out of scope.</p>
+allocation</a>. Out of scope.</p>
 
 <p>We will reserve registers RAX and RBX for menial work like arithmetic, pushing
-and popping.  RAX must also hold the return value, because that&#39;s the
-convention.  The CPU already has a stack, so we&#39;ll use that as our data stack
+and popping. RAX must also hold the return value, because that&#39;s the
+convention. The CPU already has a stack, so we&#39;ll use that as our data stack
 mechanism.</p>
 
-<p>Registers RDI, RSI, RDC and RCX will be reserved for variables and arguments.
+<p>Registers RDI, RSI, RDX and RCX will be reserved for variables and arguments.
 Per <a href="https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf">AMD64 convention</a>, we expect to see function arguments passed
 in those registers, in that order. In real programs, the matter is a bit more
 involved.</p>
@@ -252,15 +252,16 @@ one argument, the bytecode will refer to the zeroth variable. Through the
 </code></pre></figure>
 <p>The <code>STORE_FAST</code> instruction does the reverse. It pops a value off the stack
 and stores it in the argument register:</p>
-<figure class="highlight"><pre><code class="language-text" data-lang="text">    yield &quot;pop&quot;, &quot;rax&quot;, None
-    yield &quot;mov&quot;, self.variable(arg), &quot;rax&quot;
+<figure class="highlight"><pre><code class="language-text" data-lang="text">yield &quot;pop&quot;, &quot;rax&quot;, None
+yield &quot;mov&quot;, self.variable(arg), &quot;rax&quot;
 </code></pre></figure>
 <p>A binary instruction will pop two values off the stack. For example</p>
-<figure class="highlight"><pre><code class="language-text" data-lang="text">    elif op == &quot;BINARY_MULTIPLY&quot;:
-        yield &quot;pop&quot;, &quot;rax&quot;, None
-        yield &quot;pop&quot;, &quot;rbx&quot;, None
-        yield &quot;imul&quot;, &quot;rax&quot;, &quot;rbx&quot;
-        yield &quot;push&quot;, &quot;rax&quot;, None
+<figure class="highlight"><pre><code class="language-text" data-lang="text"># ...
+elif op == &quot;BINARY_MULTIPLY&quot;:
+    yield &quot;pop&quot;, &quot;rax&quot;, None
+    yield &quot;pop&quot;, &quot;rbx&quot;, None
+    yield &quot;imul&quot;, &quot;rax&quot;, &quot;rbx&quot;
+    yield &quot;push&quot;, &quot;rax&quot;, None
 </code></pre></figure>
 <p>That&#39;s just about it. <code>LOAD_CONST</code> will use a special instruction for storing
 immediate values (i.e., constant integers). Here is the entire method:</p>
@@ -305,6 +306,7 @@ immediate values (i.e., constant integers). Here is the entire method:</p>
         elif op == &quot;RETURN_VALUE&quot;:
             yield &quot;pop&quot;, &quot;rax&quot;, None
             yield &quot;ret&quot;, None, None
+
         else:
             raise NotImplementedError(op)
 </code></pre></figure>
@@ -366,8 +368,7 @@ like <code>mov rax, rax</code>.</p>
     while index &lt; len(ir):
         op1, a1, b1 = fetch(index)
         op2, a2, b2 = fetch(index + 1)
-        op3, a3, b3 = fetch(index + 2)
-        op4, a4, b4 = fetch(index + 3)
+        # ...
 
         # Removed no-op movs
         if op1 == &quot;mov&quot; and a1 == b1:
@@ -515,13 +516,13 @@ instructions should be optimizable. Let&#39;s run two passes on the IR:</p>
  (&#39;ret&#39;, None, None)]
 </code></pre></figure>
 <p>We&#39;ve now saved seven instructions. Our optimizer won&#39;t be able to improve this
-code any further. We could add more peephole optimizations, but another good
-technique would be to use a real register allocated so that we use the full
-spectrum of available registers. The IR compiler could then just assign values
-to unique registers like <code>reg1</code>, <code>reg2</code> and so on, then the allocator would
-choose how to populate the available registers properly. This is actually a hot
-topic for research, and especially for JIT compilation because the general
-problem is NP-complete.</p>
+code any further. We could add even more peephole optimizations, but another
+good technique would be to use a real register allocated so that we use the
+full spectrum of available registers. The IR compiler could then just assign
+values to unique registers like <code>reg1</code>, <code>reg2</code> and so on, then the allocator
+would choose how to populate the available registers properly. This is actually
+a hot topic for research, and especially for JIT compilation because the
+general problem is NP-complete.</p>
 
 <h2>Part four: Translating IR to x86-64 machine code</h2>
 
