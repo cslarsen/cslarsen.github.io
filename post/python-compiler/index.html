@@ -152,7 +152,7 @@ call multiply
 call subtract
 </code></pre></figure>
 <p>The <code>multiply</code> and <code>subtract</code> functions find their arguments on the stack. For
-subtract, the two arguments consist of the products <code>2*2</code> and <code>3*3</code>.</p>
+<code>subtract</code>, the two arguments consist of the products <code>2*2</code> and <code>3*3</code>.</p>
 
 <p>The use of a stack makes it possible to execute instructions linearly, and this
 is essentially how stack machines operate. With that, you will probably
@@ -164,8 +164,8 @@ loop</a>.</p>
 <p>We will now translate the bytecode instructions to an <a href="https://en.wikipedia.org/wiki/Intermediate_representation">intermediate
 representation (IR)</a>. That is, in a form suitable for performing
 things like analysis, translation and optimization. Ours will be blissfully
-naive. We will forego things <a href="https://en.wikipedia.org/wiki/Static_single_assignment_form">single-static assignment (SSA)</a> and
-<a href="https://en.wikipedia.org/wiki/Register_allocation">register allocation</a> for the sake of simplicity.</p>
+naive. We will forego things like <a href="https://en.wikipedia.org/wiki/Static_single_assignment_form">single-static assignment (SSA)</a>
+and <a href="https://en.wikipedia.org/wiki/Register_allocation">register allocation</a> for the sake of simplicity.</p>
 
 <p>Our IR will consist of pseudo-assembly instructions in a list, with a faint
 resemblance to <a href="https://en.wikipedia.org/wiki/Three-address_code">three address codes (TAC)</a>. For example</p>
