@@ -50,6 +50,9 @@ scratch, using nothing but stock Python modules.</p>
 native code to callable Python functions. The complete code is available at
 <a href="https://github.com/cslarsen/minijit">github.com/cslarsen/minijit</a>.</p>
 
+<p>Update: This post <em>also</em> made the <a href="https://news.ycombinator.com/front?day=2017-11-21">front page of HN</a>! Check out the
+<a href="https://news.ycombinator.com/item?id=15750700">discussion</a>.</p>
+
 <p>At the end of this post, we will be able to compile branchless Python functions
 that perform arithmetic on signed 64-bit values:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">&gt;&gt;&gt; from jitcompiler import *
@@ -132,8 +135,8 @@ above expression can be translated to <a href="https://en.wikipedia.org/wiki/Rev
 using the <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">shunting-yard algorithm</a>:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">2 2 * 3 3 * -
 </code></pre></figure>
-<p>Moving from left to right, we push 2 on the stack, then another 2. The <code>*</code> pops
-them both off the stack and pushes the their product 4. Push 3 and 3, pop them
+<p>Moving from left to right, we push 2 on the stack, then another 2. For the <code>*</code>
+operation we pop them both off and push their product 4. Push 3 and 3, pop them
 off and push their product 9. The stack will now contain 9 on the top and 4 at
 the bottom. For the final subtraction, we pop them off, perform the subtraction
 and push the result -5 on the stack.</p>
@@ -526,11 +529,11 @@ general problem is NP-complete.</p>
 
 <h2>Part four: Translating IR to x86-64 machine code</h2>
 
-<p>So, we have translated Python bytecode to IR and we have done some
+<p>So, we have translated Python bytecode to our IR and we have done some
 optimizations on it. We are finally ready to assemble it to machine code!</p>
 
 <p>Our approach will be to write an assembler class that emits instructions. If we
-use the same name for the emitter methods as in the IR code, and use the same
+use the same name for the emitter methods as in the IR, and use the same
 signature for all, then we can just blindly assemble the whole IR in a short
 loop:</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">assembler = Assembler(mj.PAGESIZE)
@@ -542,8 +545,9 @@ for name, a, b in ir:
 <p>If the instruction is <code>mov rax, rbx</code>, then <code>emit</code> will point to <code>assembler.mov</code>
 and the call will therefore be <code>assembler.mov(&quot;rax&quot;, &quot;rbx&quot;)</code>.</p>
 
-<p>Let&#39;s write an assembler class. We copy the code for <code>address</code>, <code>little_endian</code>
-and import <code>create_block</code> from the <a href="/post/python-jit/">code in the previous post</a>.</p>
+<p>Let&#39;s write an assembler class. We&#39;ll copy the code for <code>address</code>,
+<code>little_endian</code> and import <code>create_block</code> from the <a href="/post/python-jit/">code in the previous
+post</a>.</p>
 <figure class="highlight"><pre><code class="language-text" data-lang="text">class Assembler(object):
     def __init__(self, size):
         self.block = mj.create_block(size)
@@ -806,7 +810,7 @@ register allocator, for example. Create more peephole optimizations. Add
 support for calling other functions, loops.</p>
 
 <p>With a decorator, you should be able to swap out class methods on the fly with
-compiled ones. That&#39;s exactly what  <a href="https://numba.pydata.org/">Numba</a> does, but ours is just a
+compiled ones. That&#39;s exactly what <a href="https://numba.pydata.org/">Numba</a> does, but ours is just a
 drop in the ocean compared to that.</p>
 
 <p>While we took the approach of translating Python bytecode, another good
