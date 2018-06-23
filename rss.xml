@@ -9,14 +9,14 @@
     <link>https://csl.name</link>
     <description>Personal homepage with posts mainly on programming</description>
     <copyright>&copy; 1996-2017 Christian Stigen Larsen.<br/>Verbatim copying and redistribution of content from this site is permitted provided this notice is preserved.<br/><a href='https://github.com/cslarsen/csl.name'>Site source</a>.</copyright>
-    <pubDate>Thu, 16 Nov 2017 20:52:12 +0100</pubDate>
+    <pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
     <item>
       <title>JIT compiling a subset of Python to x86-64</title>
       <link>https://csl.name/post/python-compiler/</link>
       <description><![CDATA[This post shows how to write a basic JIT compiler for the Python bytecode, from
 scratch, using nothing but stock Python modules.
 ]]></description>
-      <pubDate>Thu, 16 Nov 2017 20:52:12 +0100</pubDate>
+      <pubDate>Thu, 16 Nov 2017 19:52:12 +0000</pubDate>
       <guid>https://csl.name/post/python-compiler/</guid>
       <content:encoded><![CDATA[This post shows how to write a basic JIT compiler for the Python bytecode, from
 scratch, using nothing but stock Python modules.
@@ -884,7 +884,7 @@ look at his excellent code and post.
 [stack-register.wiki]: https://en.wikipedia.org/wiki/Stack_register
 [tac.wiki]: https://en.wikipedia.org/wiki/Three-address_code
 ]]></content:encoded>
-      <dc:date>2017-11-16T20:52:12+01:00</dc:date>
+      <dc:date>2017-11-16T19:52:12+00:00</dc:date>
     </item>
     <item>
       <title>Writing a basic x86-64 JIT compiler from scratch in stock Python</title>
@@ -892,7 +892,7 @@ look at his excellent code and post.
       <description><![CDATA[In this post I&#39;ll show how to write a rudimentary, native x86-64 just-in-time
 compiler (JIT) in CPython, using only the built-in modules.
 ]]></description>
-      <pubDate>Wed, 08 Nov 2017 22:03:00 +0100</pubDate>
+      <pubDate>Wed, 08 Nov 2017 21:03:00 +0000</pubDate>
       <guid>https://csl.name/post/python-jit/</guid>
       <content:encoded><![CDATA[In this post I'll show how to write a rudimentary, native x86-64 [just-in-time
 compiler (JIT)][jit.wiki] in CPython, using only the built-in modules.
@@ -1387,7 +1387,7 @@ focuses solely on the compilation stage. Stay tuned!
 [sysconf.man]: http://man7.org/linux/man-pages/man3/sysconf.3.html
 [wx.wiki]: https://en.wikipedia.org/wiki/W%5EX
 ]]></content:encoded>
-      <dc:date>2017-11-08T22:03:00+01:00</dc:date>
+      <dc:date>2017-11-08T21:03:00+00:00</dc:date>
     </item>
     <item>
       <title>Embedding binary data in executables</title>
@@ -1396,7 +1396,7 @@ focuses solely on the compilation stage. Stay tuned!
 situations, it may be better to embed binary data right into the executable
 file. Here are a few ways to do that.
 ]]></description>
-      <pubDate>Wed, 08 Jun 2016 01:45:40 +0200</pubDate>
+      <pubDate>Tue, 07 Jun 2016 23:45:40 +0000</pubDate>
       <guid>https://csl.name/post/embedding-binary-data/</guid>
       <content:encoded><![CDATA[Applications usually load resources like images from disk. But, in some
 situations, it may be better to embed binary data right into the executable
@@ -1518,7 +1518,7 @@ anything from disk.
 
 I'm sure there are many other use cases as well.
 ]]></content:encoded>
-      <dc:date>2016-06-08T01:45:40+02:00</dc:date>
+      <dc:date>2016-06-07T23:45:40+00:00</dc:date>
     </item>
     <item>
       <title>Sending raw Ethernet frames from Python</title>
@@ -1529,7 +1529,7 @@ for research or performance, you need to interface with some weird device on
 the local network, or you&#39;re just playing around for fun.  I used it
 extensively while researching use of OpenFlow with Mininet.
 ]]></description>
-      <pubDate>Tue, 07 Jun 2016 00:30:30 +0200</pubDate>
+      <pubDate>Mon, 06 Jun 2016 22:30:30 +0000</pubDate>
       <guid>https://csl.name/post/raw-ethernet-frames/</guid>
       <content:encoded><![CDATA[Sometimes you just *need* to send raw Ethernet frames directly on the network.
 Seriously, it has its uses: Perhaps you're constructing your own non-IP network
@@ -1616,7 +1616,7 @@ Here's a full example using IPv4 + ICMP PING REQ payload:
                       pack(ipv4_header + icmp_ping))
           print("Sent Ethernet w/IPv4 ICMP PING payload of length %d bytes" % r)
 ]]></content:encoded>
-      <dc:date>2016-06-07T00:30:30+02:00</dc:date>
+      <dc:date>2016-06-06T22:30:30+00:00</dc:date>
     </item>
     <item>
       <title>How GCC fixes bad hand-optimizations</title>
@@ -1625,7 +1625,7 @@ Here's a full example using IPv4 + ICMP PING REQ payload:
 esoteric tricks to speed up code on different systems. Rather surprisingly,
 GCC will even correct bad hand-optimizations!
 ]]></description>
-      <pubDate>Sun, 05 Jun 2016 01:00:24 +0200</pubDate>
+      <pubDate>Sat, 04 Jun 2016 23:00:24 +0000</pubDate>
       <guid>https://csl.name/post/gcc-optimization-fix/</guid>
       <content:encoded><![CDATA[The GCC and LLVM optimizers contain <a
 href="http://www.fefe.de/source-code-optimization.pdf">troves of arcane and
@@ -1942,7 +1942,7 @@ Versions used
     $ nasm -v
     NASM version 2.12.01 compiled on Mar 23 2016
 ]]></content:encoded>
-      <dc:date>2016-06-05T01:00:24+02:00</dc:date>
+      <dc:date>2016-06-04T23:00:24+00:00</dc:date>
     </item>
     <item>
       <title>Writing a shared C++ library and loading it in LuaJIT</title>
@@ -3422,7 +3422,7 @@ small reference data set, I managed to get a rough result that happened to
 coincide with a blood test.
 
 ]]></description>
-      <pubDate>Tue, 23 Feb 2016 22:18:00 +0100</pubDate>
+      <pubDate>Tue, 23 Feb 2016 21:18:00 +0000</pubDate>
       <guid>https://csl.name/post/hla-b27/</guid>
       <content:encoded><![CDATA[<p class="lead">
 Recently, I wanted to see if I could <a
@@ -3553,7 +3553,7 @@ consuming and costs money. If a doctor could quickly see that the probability
 of HLA-B27 is low, and depending on the context, it may not be necessary to
 order a blood test at all.
 ]]></content:encoded>
-      <dc:date>2016-02-23T22:18:00+01:00</dc:date>
+      <dc:date>2016-02-23T21:18:00+00:00</dc:date>
     </item>
     <item>
       <title>Using GNU Global with C++ and Git</title>
@@ -3564,7 +3564,7 @@ compelling way to quickly search your project from the command line.  Here I
 show how to index your code and update it automatically when using git.
 
 ]]></description>
-      <pubDate>Tue, 23 Feb 2016 20:19:20 +0100</pubDate>
+      <pubDate>Tue, 23 Feb 2016 19:19:20 +0000</pubDate>
       <guid>https://csl.name/post/gtags/</guid>
       <content:encoded><![CDATA[<p class="lead">
 <a href="https://www.gnu.org/software/global/">GNU global</a> is a very
@@ -3713,7 +3713,7 @@ to manually update the database. However, if you have only changed a few files
 and want to re-index, you might be better off using `global -u` to perform an
 update. It could be faster.
 ]]></content:encoded>
-      <dc:date>2016-02-23T20:19:20+01:00</dc:date>
+      <dc:date>2016-02-23T19:19:20+00:00</dc:date>
     </item>
     <item>
       <title>Adding a TLS certificate to your NearlyFreeSpeech site</title>
@@ -3723,7 +3723,7 @@ which is hosted on NearlyFreeSpeech (NFSN).
 But I had forgotten how to. So I decided to post a condensed version of the
 steps found here on my own site.
 ]]></description>
-      <pubDate>Sat, 23 Jan 2016 22:54:29 +0100</pubDate>
+      <pubDate>Sat, 23 Jan 2016 21:54:29 +0000</pubDate>
       <guid>https://csl.name/post/tls-nfsn/</guid>
       <content:encoded><![CDATA[I recently had to renew the TLS certificate on [csl.name](https://csl.name),
 which is hosted on [NearlyFreeSpeech (NFSN)](https://www.nearlyfreespeech.net).
@@ -3774,14 +3774,14 @@ CA, and so on, but it's worth a shot.
 [steps]: https://www.mc-guinness.co.uk/blog/20150710/set-up-https-ssl-tls-encryption-access-to-nearlyfreespeech-hosted-sites/
 [tls chain]: https://faq.nearlyfreespeech.net/section/ourservice/tlschain#tlschain
 ]]></content:encoded>
-      <dc:date>2016-01-23T22:54:29+01:00</dc:date>
+      <dc:date>2016-01-23T21:54:29+00:00</dc:date>
     </item>
     <item>
       <title>Making a simple virtual machine interpreter in Python</title>
       <link>https://csl.name/post/vm/</link>
       <description><![CDATA[
 ]]></description>
-      <pubDate>Wed, 28 Jan 2015 21:59:50 +0100</pubDate>
+      <pubDate>Wed, 28 Jan 2015 20:59:50 +0000</pubDate>
       <guid>https://csl.name/post/vm/</guid>
       <content:encoded><![CDATA[<p class="lead">
 
@@ -4260,7 +4260,7 @@ The complete code is available at [vm.py on github][vm.py].
 [symbol-table]: https://en.wikipedia.org/wiki/Symbol_table
 [vm.py]: https://github.com/cslarsen/python-simple-vm/blob/master/vm.py
 ]]></content:encoded>
-      <dc:date>2015-01-28T21:59:50+01:00</dc:date>
+      <dc:date>2015-01-28T20:59:50+00:00</dc:date>
     </item>
     <item>
       <title>Compiling and using em-dosbox</title>
@@ -4273,7 +4273,7 @@ you can compile em-dosbox and put up your own MS-DOS programs on the web.  This
 guide assumes you&#39;re using Mac OS X and Homebrew, but should be
 informative for other UNIX users as well.
 ]]></description>
-      <pubDate>Thu, 22 Jan 2015 22:08:00 +0100</pubDate>
+      <pubDate>Thu, 22 Jan 2015 21:08:00 +0000</pubDate>
       <guid>https://csl.name/post/em-dosbox/</guid>
       <content:encoded><![CDATA[Archive.org has released a [large number of MS-DOS
 games](https://archive.org/details/softwarelibrary_msdos_games/v2) that can be
@@ -4435,7 +4435,7 @@ work fine with Firefox and Safari, on Chrome the emulator seems to ends
 abruptly.  By the way, Firefox seems to be the one giving the best performance
 with em-dosbox.
 ]]></content:encoded>
-      <dc:date>2015-01-22T22:08:00+01:00</dc:date>
+      <dc:date>2015-01-22T21:08:00+00:00</dc:date>
     </item>
     <item>
       <title>A Short R⁷RS Scheme Tutorial</title>
@@ -4445,7 +4445,7 @@ language. Specifically, it&#39;s aimed at the latest version, R⁷RS.
 This little tutorial will be updated in the time ahead, so be sure to post
 comments so I know what needs to be done!
 ]]></description>
-      <pubDate>Thu, 01 Jan 2015 11:58:04 +0100</pubDate>
+      <pubDate>Thu, 01 Jan 2015 10:58:04 +0000</pubDate>
       <guid>https://csl.name/post/scheme-tutorial/</guid>
       <content:encoded><![CDATA[This is a *work-in-progress* introduction to the Scheme programming
 language. Specifically, it's aimed at the latest version, R⁷RS.
@@ -4832,7 +4832,7 @@ That's all for now! But check back later for more updates.
 [srfi-69]: http://srfi.schemers.org/srfi-69/srfi-69.html
 [wingo-impls]: http://wingolog.org/archives/2013/01/07/an-opinionated-guide-to-scheme-implementations
 ]]></content:encoded>
-      <dc:date>2015-01-01T11:58:04+01:00</dc:date>
+      <dc:date>2015-01-01T10:58:04+00:00</dc:date>
     </item>
     <item>
       <title>Building Qt apps on the command line</title>
@@ -5443,7 +5443,7 @@ This document is the HTML&dash;version of [a gist][gist] I made earlier.
       <description><![CDATA[Some years ago, I solved some programming puzzles posted by Greplin (later
 Cue, then acquired by Apple).
 ]]></description>
-      <pubDate>Thu, 03 Mar 2011 09:10:27 -0800</pubDate>
+      <pubDate>Thu, 03 Mar 2011 17:10:27 +0000</pubDate>
       <guid>https://csl.name/post/palindromes-gettysburg-shakespeare/</guid>
       <content:encoded><![CDATA[Some years ago, I [solved some programming puzzles][gist] posted by Greplin (later
 Cue, then acquired by Apple).
@@ -5658,7 +5658,7 @@ you're interested in <em>generating</em> palindromes, you should check out
 [cressida]: https://en.wikipedia.org/wiki/Troilus_and_Cressida
 [rich3]: https://en.wikipedia.org/wiki/Richard_III_(play)
 ]]></content:encoded>
-      <dc:date>2011-03-03T09:10:27-08:00</dc:date>
+      <dc:date>2011-03-03T17:10:27+00:00</dc:date>
     </item>
     <item>
       <title>A UDP syslog client in Python</title>
@@ -5668,7 +5668,7 @@ it seem to be a wrapper around the POSIX syslog system
 calls. This means you cannot use it to send syslog messages
 over the network.
 ]]></description>
-      <pubDate>Fri, 14 Nov 2008 10:53:22 +0100</pubDate>
+      <pubDate>Fri, 14 Nov 2008 09:53:22 +0000</pubDate>
       <guid>https://csl.name/post/python-syslog-client/</guid>
       <content:encoded><![CDATA[While the Python standard library offers a [syslog][python.syslog] module,
 it seem to be a wrapper around the [POSIX syslog system
@@ -5701,7 +5701,7 @@ some convenience functions like `warn()`, etc.
 [python.syslog]: http://docs.python.org/2/library/syslog.html
 [posix.syslog]: http://pubs.opengroup.org/onlinepubs/007904975/basedefs/syslog.h.html
 ]]></content:encoded>
-      <dc:date>2008-11-14T10:53:22+01:00</dc:date>
+      <dc:date>2008-11-14T09:53:22+00:00</dc:date>
     </item>
     <item>
       <title>Einstein's problem and a solution by elimination</title>
@@ -6132,7 +6132,7 @@ steps and just show you the final table.
       <description><![CDATA[In this short tutorial I&#39;ll show how to run Lua programs from C and C++ and how
 to expose functions to them. It&#39;s easy!
 ]]></description>
-      <pubDate>Fri, 20 Oct 2006 21:42:24 +0200</pubDate>
+      <pubDate>Fri, 20 Oct 2006 19:42:24 +0000</pubDate>
       <guid>https://csl.name/post/lua-and-cpp/</guid>
       <content:encoded><![CDATA[In this short tutorial I'll show how to run Lua programs from C and C++ and how
 to expose functions to them. It's easy!
@@ -6405,7 +6405,7 @@ library</a>.
 LuaJIT runs between 10-20 and up to 135 times faster than interpreted Lua, so
 it's definitely worth it.
 ]]></content:encoded>
-      <dc:date>2006-10-20T21:42:24+02:00</dc:date>
+      <dc:date>2006-10-20T19:42:24+00:00</dc:date>
     </item>
     <item>
       <title>Calling C functions from Python</title>
@@ -6499,6 +6499,6 @@ suggest you check out [SWIG][swig] or [Boost Python][boost.python].
 ]]></content:encoded>
       <dc:date>2006-03-28T00:00:00+00:00</dc:date>
     </item>
-    <dc:date>2017-11-16T20:52:12+01:00</dc:date>
+    <dc:date>2017-11-16T19:52:12+00:00</dc:date>
   </channel>
 </rss>
